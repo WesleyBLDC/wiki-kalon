@@ -1,0 +1,113 @@
+# Wiki.js Kalon: weekly check for a newer upstream Wiki.js release.
+# Tries to replay the Kalon commits onto it (a dry run, nothing is pushed) and opens one issue per
+# release saying either that the replay is clean or which files conflict. A maintainer then does the
+# replay locally (see KALON.md): pushing rewritten workflow files needs more than GITHUB_TOKEN may do.
+name: Kalon upstream watch
+
+on:
+  schedule:
+    - cron: '17 9 * * 1' # Mondays 09:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Compare with the latest upstream release
+        id: compare
+        run: |
+          set -euo pipefail
+          CURRENT="${{ github.event.repository.default_branch }}"
+          CURRENT="${CURRENT#kalon/}"
+          LATEST="$(gh api repos/requarks/wiki/releases/latest --jq .tag_name)"
+          echo "current=$CURRENT latest=$LATEST"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+          if [ "$(printf '%s\n%s\n' "$CURRENT" "$LATEST" | sort -V | tail -n1)" = "$CURRENT" ]; then
+            echo "new=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip if an issue already exists for this release
+        id: existing
+        if: steps.compare.outputs.new == 'true'
+        run: |
+          N="$(gh issue list --state all --label upstream-release --search "Upstream ${{ steps.compare.outputs.latest }} in:title" --json number --jq length)"
+          echo "found=$N" >> "$GITHUB_OUTPUT"
+
+      - name: Dry run the replay
+        id: replay
+        if: steps.compare.outputs.new == 'true' && steps.existing.outputs.found == '0'
+        run: |
+          set -uo pipefail
+          OLD="${{ steps.compare.outputs.current }}"
+          NEW="${{ steps.compare.outputs.latest }}"
+          git config user.name "kalon-upstream-watch"
+          git config user.email "actions@users.noreply.github.com"
+          git remote add upstream https://github.com/requarks/wiki.git
+          git fetch --quiet upstream "refs/tags/${OLD}:refs/tags/${OLD}" "refs/tags/${NEW}:refs/tags/${NEW}"
+          git switch --quiet -c "replay" "origin/kalon/${OLD}"
+          COMMITS="$(git log --format='- %s' "${OLD}..HEAD")"
+          if GIT_SEQUENCE_EDITOR=: git rebase -i --autosquash --onto "${NEW}" "${OLD}" > rebase.log 2>&1; then
+            echo "clean=true" >> "$GITHUB_OUTPUT"
+            CONFLICTS=""
+          else
+            echo "clean=false" >> "$GITHUB_OUTPUT"
+            # shellcheck disable=SC2016 # the backticks are Markdown, not shell
+            CONFLICTS="$(git diff --name-only --diff-filter=U | sed 's/^/- `/; s/$/`/')"
+            git rebase --abort || true
+          fi
+          {
+            echo "COMMITS<<EOF_C"; echo "${COMMITS:-- none}"; echo "EOF_C"
+            echo "CONFLICTS<<EOF_X"; echo "${CONFLICTS}"; echo "EOF_X"
+          } >> "$GITHUB_ENV"
+
+      - name: Open the issue
+        if: steps.replay.outcome == 'success'
+        run: |
+          OLD="${{ steps.compare.outputs.current }}"
+          NEW="${{ steps.compare.outputs.latest }}"
+          if [ "${{ steps.replay.outputs.clean }}" = "true" ]; then
+            TITLE="Upstream ${NEW}: ready to replay"
+            LABELS="upstream-release"
+            STATUS="The Kalon commits replay onto \`${NEW}\` without conflicts."
+          else
+            TITLE="Upstream ${NEW}: replay has conflicts"
+            LABELS="upstream-release,conflict"
+            STATUS=$'The replay onto `'"${NEW}"$'` stops on conflicts in:\n\n'"${CONFLICTS}"
+          fi
+          {
+            echo "Upstream Wiki.js released [${NEW}](https://github.com/requarks/wiki/releases/tag/${NEW}); Kalon is on \`${OLD}\`."
+            echo
+            echo "${STATUS}"
+            echo
+            echo "Kalon commits to carry:"
+            echo
+            echo "${COMMITS}"
+            echo
+            echo "Next steps (see KALON.md):"
+            echo
+            echo '```bash'
+            echo "git fetch upstream --tags"
+            echo "git switch -c kalon/${NEW} kalon/${OLD}"
+            echo "GIT_SEQUENCE_EDITOR=: git rebase -i --autosquash --onto ${NEW} ${OLD}"
+            echo "# resolve conflicts, test, then:"
+            echo "git push origin kalon/${NEW} && git tag ${NEW}-kalon.1 && git push origin ${NEW}-kalon.1"
+            echo '```'
+            echo
+            echo "Read the upstream release notes first, especially for security fixes and database migrations."
+          } > body.md
+          gh issue create --title "$TITLE" --label "$LABELS" --body-file body.md

@@ -1,0 +1,139 @@
+# Wiki.js Kalon: build, smoke test and publish the image for a release tag.
+# Tag format: <upstream version>-kalon.<n>, e.g. 3.3.0-kalon.1, pushed from a kalon/<upstream version> branch.
+# Mirrors upstream's .github/workflows/build.yml (version stamped at build time, frontend and blocks
+# built, dev/build/Dockerfile), for linux/amd64 only.
+name: Kalon image
+
+on:
+  push:
+    tags:
+      - '*-kalon.*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kalon-image-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  image:
+    name: Build, test, publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the GitHub Release
+      packages: write # push to ghcr.io
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/wikijs-kalon
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Derive versions from the tag
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          [[ "$TAG" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-kalon\.([0-9]+)$ ]] || { echo "::error::Tag $TAG is not <x.y.z>-kalon.<n>"; exit 1; }
+          UPSTREAM="${BASH_REMATCH[1]}"
+          {
+            echo "UPSTREAM=$UPSTREAM"
+            echo "APP_VERSION=${UPSTREAM}+kalon.${BASH_REMATCH[2]}"
+            echo "IMAGE_LOWER=${IMAGE,,}"
+          } >> "$GITHUB_ENV"
+
+      - name: Check the tag sits on top of the upstream release
+        run: |
+          git remote add upstream https://github.com/requarks/wiki.git
+          git fetch --quiet upstream "refs/tags/${UPSTREAM}:refs/tags/upstream-${UPSTREAM}"
+          git merge-base --is-ancestor "upstream-${UPSTREAM}" HEAD \
+            || { echo "::error::$GITHUB_REF_NAME does not contain upstream release $UPSTREAM"; exit 1; }
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26.x
+
+      - name: Stamp the version (as upstream does)
+        run: |
+          yq -iP '.version = strenv(APP_VERSION)' backend/package.json -o json
+          yq -iP '.version = strenv(APP_VERSION)' frontend/package.json -o json
+          yq -i '.version = strenv(APP_VERSION) | .appVersion = strenv(APP_VERSION)' dev/chart/Chart.yaml
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build blocks
+        working-directory: blocks
+        run: |
+          npm ci
+          npm run build
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: dev/build/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: ${{ env.IMAGE_LOWER }}:${{ github.ref_name }}
+          labels: |
+            org.opencontainers.image.title=Wiki.js Kalon
+            org.opencontainers.image.description=Wiki.js Kalon, an unofficial fork of Wiki.js 3
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.documentation=https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/KALON.md
+            org.opencontainers.image.licenses=AGPL-3.0-only
+            org.opencontainers.image.version=${{ env.APP_VERSION }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.base.name=ghcr.io/requarks/wiki:${{ env.UPSTREAM }}
+
+      - name: Smoke test (boots against Postgres, serves /login)
+        run: |
+          set -euo pipefail
+          docker network create smoke
+          docker run -d --name smoke-db --network smoke \
+            -e POSTGRES_DB=wiki -e POSTGRES_USER=wiki -e POSTGRES_PASSWORD=smoke postgres:18
+          for _ in $(seq 1 30); do docker exec smoke-db pg_isready -U wiki -d wiki && break; sleep 2; done
+          docker run -d --name smoke-wiki --network smoke -p 3000:3000 \
+            -e DB_HOST=smoke-db -e DB_PORT=5432 -e DB_NAME=wiki -e DB_USER=wiki -e DB_PASS=smoke \
+            -e ADMIN_EMAIL=admin@example.com -e ADMIN_PASS=smoke-test-1234 \
+            "${IMAGE_LOWER}:${GITHUB_REF_NAME}"
+          ok=""
+          for _ in $(seq 1 60); do
+            if curl -fsS -o /dev/null --max-time 5 http://127.0.0.1:3000/login; then ok=1; break; fi
+            sleep 3
+          done
+          docker logs smoke-wiki 2>&1 | tail -n 60
+          [ -n "$ok" ] || { echo "::error::/login never answered 200"; exit 1; }
+          docker logs smoke-wiki 2>&1 | grep -F "Wiki.js ${APP_VERSION}" \
+            || { echo "::error::The running app does not report version ${APP_VERSION}"; exit 1; }
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push image
+        run: docker push "${IMAGE_LOWER}:${GITHUB_REF_NAME}"
+
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PREV="$(git describe --tags --abbrev=0 --match '*-kalon.*' "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
+          BASE="${PREV:-upstream-${UPSTREAM}}"
+          {
+            echo "Wiki.js Kalon ${APP_VERSION}, based on upstream Wiki.js [${UPSTREAM}](https://github.com/requarks/wiki/releases/tag/${UPSTREAM})."
+            echo
+            echo "Image: \`${IMAGE_LOWER}:${GITHUB_REF_NAME}\`"
+            echo
+            echo "Kalon commits since ${BASE}:"
+            echo
+            git log --format='- %s' "${BASE}..${GITHUB_REF_NAME}" -- . ':(exclude)assets' | grep -v '^- Merge' || echo "- none"
+          } > notes.md
+          gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file notes.md --verify-tag
