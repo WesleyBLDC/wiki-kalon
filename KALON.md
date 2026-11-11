@@ -129,6 +129,7 @@ Use the upstream dev container, described at https://docs.js.wiki/dev.
 
 - Backend: `npm run dev` in `backend/`.
 - Frontend: `npm run dev` in `frontend/`, served on port 3001.
+- Both workspaces need Node 26. Without the dev container, a Postgres 17+ in Docker on a local port and a `config.yml` (copied from `config.sample.yml`, gitignored) pointing at it is enough; run `npm run build` in `frontend/` once before the first backend start, since the backend serves `assets/`.
 - To try a change against a clean wiki, use the upstream throwaway instance skill in `.claude/skills/throwaway-instance`.
 
 Check every UI change on phone, tablet and desktop widths, in light and dark mode, before committing.
