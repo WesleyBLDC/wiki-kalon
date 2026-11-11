@@ -70,5 +70,8 @@ These rules apply to people and agents alike; `KALON.md` is the maintainer guide
 - **Offer generic improvements upstream** as small PRs per `.github/CONTRIBUTING.md`.
   An accepted PR is a commit we stop carrying.
 - **Update the carried commits table in `KALON.md` in the same commit** that adds, changes or drops a Kalon commit.
+- **Names come from the repository.**
+  Kalon workflows name the repository and its image only through `github.repository` or `$GITHUB_REPOSITORY`, never spelled out, so a renamed repository publishes under its new name.
+  `dev/kalon/check-names.sh` enforces it, and also fails on the retired name, in the pre-commit hook and before every image build.
 - **In workflows and scripts, pass `--repo` to every `gh` command.**
   In a fork, `gh` defaults to the parent repository (`requarks/wiki`), so a bare `gh release create` or `gh issue create` targets upstream and fails.
