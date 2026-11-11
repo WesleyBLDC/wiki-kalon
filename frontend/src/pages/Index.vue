@@ -772,6 +772,8 @@ import SiteBanner from '@/components/SiteBanner.vue'
 // kalon: the page's top bar actions and the line under its title
 import PageActions from '@/kalon/components/PageActions.vue'
 import PageMeta from '@/kalon/components/PageMeta.vue'
+// kalon: which editor a missing page is created with
+import { firstArticleEditor } from '@/kalon/editors'
 
 /*
   Neither of these is wanted by a page view that has no comments, and the talk view brings a markdown
@@ -1281,8 +1283,10 @@ const canEditTags = computed(
   view can mount. A site with it switched off has nothing to open, so the screen says the page is
   missing and leaves it at that.
 */
+// kalon: create with the first article editor the site has on, not Markdown only (`kalon/editors.js`)
+const kalonCreateEditor = computed(() => firstArticleEditor(siteStore.activeEditors))
 const canCreatePage = computed(
-  () => userStore.pagePermissions.includes('write:pages') && siteStore.editors.markdown
+  () => userStore.pagePermissions.includes('write:pages') && kalonCreateEditor.value !== null
 )
 
 /*
@@ -2187,7 +2191,8 @@ function promptUnlock() {
  */
 async function createPage() {
   loading.show()
-  await pageStore.pageCreate({ editor: 'markdown', path: pageStore.path })
+  // kalon: the editor offered above
+  await pageStore.pageCreate({ editor: kalonCreateEditor.value, path: pageStore.path })
   loading.hide()
 }
 
