@@ -294,7 +294,11 @@ const kalonLayout = useSidebarLayout({
  * `NavSidebar` has to agree with it too: the dent marking the current page is only meaningful while the
  * sidebar is beside the content. See `$sidebar-overlay-max` there.
  */
-const SIDEBAR_OVERLAY_BELOW = 1200
+// kalon: 960, so a tablet or a narrower window docks the sidebar too: opened, it stays beside the page
+// across navigation until the reader collapses it (`kalon/composables/sidebarLayout.js`). The notch
+// `NavSidebar` hides below 1200px is gone in Kalon's sidebar at every width, and `PageActionsCol`'s
+// extra rail padding between the two is harmless.
+const SIDEBAR_OVERLAY_BELOW = 960
 
 /**
  * The same boundary as a reactive flag, for everything in this layout that has to know which mode the
