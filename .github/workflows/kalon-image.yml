@@ -136,4 +136,4 @@ jobs:
             echo
             git log --format='- %s' "${BASE}..${GITHUB_REF_NAME}" -- . ':(exclude)assets' | grep -v '^- Merge' || echo "- none"
           } > notes.md
-          gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file notes.md --verify-tag
+          gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --title "${GITHUB_REF_NAME}" --notes-file notes.md --verify-tag

@@ -45,7 +45,7 @@ jobs:
         id: existing
         if: steps.compare.outputs.new == 'true'
         run: |
-          N="$(gh issue list --state all --label upstream-release --search "Upstream ${{ steps.compare.outputs.latest }} in:title" --json number --jq length)"
+          N="$(gh issue list --repo "${GITHUB_REPOSITORY}" --state all --label upstream-release --search "Upstream ${{ steps.compare.outputs.latest }} in:title" --json number --jq length)"
           echo "found=$N" >> "$GITHUB_OUTPUT"
 
       - name: Dry run the replay
@@ -110,4 +110,4 @@ jobs:
             echo
             echo "Read the upstream release notes first, especially for security fixes and database migrations."
           } > body.md
-          gh issue create --title "$TITLE" --label "$LABELS" --body-file body.md
+          gh issue create --repo "${GITHUB_REPOSITORY}" --title "$TITLE" --label "$LABELS" --body-file body.md
