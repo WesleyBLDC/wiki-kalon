@@ -175,9 +175,14 @@ const locale = computed(() => pageStore.locale || siteStore.locales.primary || '
 /**
  * Whether to offer "+". `write:pages` is a page rule, so there is no way to ask the server whether
  * the reader may write in each folder shown; `canWriteOnSite` says some rule grants it somewhere, and
- * the new page flow is refused server side where it does not apply.
+ * the new page flow is refused server side where it does not apply. It comes with a page, so on a
+ * missing page (none to come with) `write:pages` at the path stands in for it.
  */
-const canAdd = computed(() => userStore.authenticated && userStore.canWriteOnSite)
+const canAdd = computed(
+  () =>
+    userStore.authenticated &&
+    (userStore.canWriteOnSite || userStore.pagePermissions.includes('write:pages'))
+)
 
 /** Who may open the file manager, as the Library menu (`HeaderLibraryMenu.vue`) decides it. */
 const canUseFileManager = computed(
