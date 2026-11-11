@@ -483,6 +483,143 @@
 }
 
 /* ---------------------------------------------------------------------------------------------- */
+/* Content blocks                                                                                 */
+/* ---------------------------------------------------------------------------------------------- */
+
+/*
+  Quieter surfaces for what sits in an article: code and tables lose their tint and shadows, a table's
+  head is a plain row instead of a dark bar, and its rows are not striped. The dark values are under
+  `not print`, as upstream's are, so a page printed from the dark theme prints the light palette.
+*/
+:root .page-contents {
+  --content-surface-code: #f7f6f3;
+  --content-rule: var(--kalon-border-strong);
+  --content-table-shadow: none;
+  --content-table-head: transparent;
+  --content-table-head-grade: transparent;
+  --content-table-head-ink: var(--kalon-text);
+  --content-table-head-rule: var(--kalon-border-strong);
+  --content-table-row: transparent;
+  --content-table-row-alt: transparent;
+}
+@media not print {
+  :root .body--dark .page-contents {
+    --content-surface-code: #202020;
+    --content-rule: var(--kalon-border-strong);
+    --content-table-shadow: none;
+    --content-table-head: transparent;
+    --content-table-head-grade: transparent;
+    --content-table-head-ink: var(--kalon-text);
+    --content-table-head-rule: var(--kalon-border-strong);
+    --content-table-row: transparent;
+    --content-table-row-alt: transparent;
+  }
+}
+
+:root .page-contents {
+  /*
+    Callouts (`{.is-info}` and the rest, and GitHub's `> [!NOTE]`): a soft tint of the severity's
+    colour with a hairline of it all round, instead of a thick bar down one side. The icon and the title
+    keep the colour; the prose stays at full contrast.
+  */
+  blockquote:is(
+    .is-info,
+    .is-success,
+    .is-important,
+    .is-warning,
+    .is-danger,
+    :has(> .is-info, > .is-success, > .is-important, > .is-warning, > .is-danger)
+  ) {
+    border-inline-start-width: 0;
+    border-radius: var(--kalon-radius);
+    background-color: color-mix(in srgb, var(--alert-hue) 8%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--alert-hue) 22%, transparent);
+  }
+
+  // -> A plain quote keeps its bar, at 2px in the ink colour
+  blockquote {
+    border-inline-start-width: 2px;
+    border-inline-start-color: var(--kalon-text);
+  }
+
+  /*
+    Link cards (`{.links-list}`): a grid of bordered cards, as many across as fit at 240px, with the
+    description on a line of its own under the title.
+  */
+  ul.links-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
+    gap: 8px;
+
+    > li {
+      margin: 0;
+      border: 1px solid var(--kalon-border-strong);
+      border-radius: var(--kalon-radius);
+      background: none;
+      box-shadow: none;
+
+      &:hover,
+      &:focus-within {
+        border-color: var(--kalon-border-strong);
+        background-color: var(--kalon-hover);
+      }
+    }
+
+    > li > a,
+    > li > p > a {
+      height: 100%;
+      padding: 0.75em 1em;
+    }
+
+    > li > a:not(.is-broken-link),
+    > li > p > a:not(.is-broken-link) {
+      color: var(--kalon-text);
+    }
+
+    em {
+      display: block;
+      margin: 0.2em 0 0;
+      padding: 0;
+      border: 0;
+      color: var(--kalon-text-2);
+      font-size: 0.875em;
+
+      &::before {
+        content: none;
+      }
+    }
+  }
+
+  // -> Code: blocks on a warm grey without a border, spans as a small rounded wash
+  pre {
+    border-color: transparent;
+    border-radius: var(--kalon-radius-sm);
+  }
+  code {
+    border-radius: var(--kalon-radius-xs);
+    background-color: var(--kalon-active);
+    font-size: 0.86em;
+  }
+  pre > code {
+    border-radius: 0;
+    background: none;
+    font-size: inherit;
+  }
+
+  // -> Tables: hairlines between rows only, no column rules, the head row in bold on the page colour
+  table {
+    border-radius: var(--kalon-radius-sm);
+  }
+  td,
+  th {
+    border-inline-end: 0;
+  }
+  th {
+    background-color: transparent;
+  }
+}
+
+/* ---------------------------------------------------------------------------------------------- */
 /* Typography                                                                                     */
 /* ---------------------------------------------------------------------------------------------- */
 
