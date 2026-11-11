@@ -415,3 +415,85 @@
   font-weight: 600;
   letter-spacing: 0.01em;
 }
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Sidebar header and footer                                                                      */
+/* ---------------------------------------------------------------------------------------------- */
+
+/*
+  With the page tree in the sidebar, the Browse button does the same job twice, so it goes; the tree
+  and the button share the "Allow Browsing" setting, so they never appear apart. Found by its icon
+  (`WIcon` marks every icon with `data-icon`). The locale button, if the site shows one, moves down to
+  sit above the footer, and the bar goes entirely when Browse was all it held.
+*/
+:root .w-drawer:has(.kalon-tree) {
+  .sidebar-actions .w-btn:has([data-icon='la:sitemap']),
+  .sidebar-actions .sidebar-actions-sep {
+    display: none;
+  }
+  .sidebar-actions:not(:has(> .w-btn:not(:has([data-icon='la:sitemap'])))) {
+    display: none;
+  }
+  .sidebar-actions {
+    order: 1;
+    height: 36px;
+    padding: 0 8px;
+    box-shadow: inset 0 1px 0 var(--kalon-border);
+
+    .w-btn {
+      flex: none;
+    }
+  }
+  .sidebar-footerbtns {
+    order: 2;
+    min-height: 36px;
+  }
+
+  // -> Sentence case at the interface size, rather than upstream's small capitals
+  .sidebar-actions .w-btn,
+  .sidebar-footerbtns .w-btn {
+    justify-content: flex-start;
+    min-height: 32px;
+    padding-inline: 8px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  // -> A locale code reads as one in capitals
+  .sidebar-actions .w-btn {
+    text-transform: uppercase;
+  }
+  .kalon-sidebar-footer {
+    order: 3;
+  }
+}
+
+/*
+  The site header where it is still shown (below 1200px, and on the profile, inbox and history
+  screens): 48px instead of 64px. Its toolbars and logo are sized inline, which only `!important`
+  outranks.
+*/
+:root .site-header {
+  .w-toolbar {
+    height: 48px !important;
+    min-height: 0;
+  }
+  // -> The logo, in the bar's first toolbar; the account avatar keeps its size
+  > .flex > .w-toolbar:first-child {
+    img {
+      height: 26px !important;
+    }
+    .w-avatar {
+      width: 26px !important;
+      height: 26px !important;
+    }
+  }
+  .site-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+  .header-search-field {
+    height: 32px;
+  }
+}

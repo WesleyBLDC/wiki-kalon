@@ -1,6 +1,7 @@
 <template>
   <w-layout>
-    <w-header class="site-header-wrap">
+    <!-- kalon: on a wide screen the header's contents move into the sidebar (`kalonHeaderInSidebar`) -->
+    <w-header v-if="!kalonHeaderInSidebar" class="site-header-wrap">
       <header-nav />
     </w-header>
     <!--
@@ -57,6 +58,8 @@
         </w-btn>
       </div>
       <template v-else>
+        <!-- kalon: the header's contents at the top and bottom of the sidebar on a wide screen -->
+        <sidebar-header v-if="kalonHeaderInSidebar" />
         <div v-if="showSidebarActions" class="sidebar-actions flex flex-nowrap items-stretch">
           <!-- -> Either button takes the whole row when the other one is off, and the separator only
                exists to divide the two, so it goes with them -->
@@ -98,6 +101,7 @@
             </w-menu>
           </w-btn>
         </w-bar>
+        <sidebar-footer v-if="kalonHeaderInSidebar" />
       </template>
     </w-drawer>
     <!--
@@ -193,6 +197,9 @@ import { useUserStore } from '@/stores/user'
 import HeaderNav from '@/components/HeaderNav.vue'
 import LocaleSelectorMenu from '@/components/LocaleSelectorMenu.vue'
 import NavBrowseMenu from '@/components/NavBrowseMenu.vue'
+// kalon: the header's contents in the sidebar on a wide screen
+import SidebarFooter from '@/kalon/components/SidebarFooter.vue'
+import SidebarHeader from '@/kalon/components/SidebarHeader.vue'
 import NavSidebar from '@/components/NavSidebar.vue'
 import NavEditMenu from '@/components/NavEditMenu.vue'
 import MainOverlayDialog from '@/components/MainOverlayDialog.vue'
@@ -324,6 +331,11 @@ const SIDEBAR_WIDTH = 255
 const SIDEBAR_WIDTH_MINI = 56
 
 const sidebarWidth = computed(() => (isSidebarMini.value ? SIDEBAR_WIDTH_MINI : SIDEBAR_WIDTH))
+
+// kalon: the header folds into the sidebar where the sidebar is a full column of its own
+const kalonHeaderInSidebar = computed(
+  () => isWideViewport.value && isSidebarAvailable.value && !isSidebarMini.value
+)
 
 /*
   The scroll-to-top button ENDS where the sidebar's column does, tucked into the bottom of it: the
