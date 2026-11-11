@@ -15,7 +15,7 @@ The backend, the database schema and the API are unchanged.
 
 The name comes from the Greek *to kalon*: beauty that comes from order, symmetry and fitness (Aristotle's *taxis*, *symmetria* and *to horismenon*).
 
-**Status:** release `3.3.0-kalon.2` is Wiki.js 3.3.0 with the frontend redesign: Inter and calm light and dark tokens, a sidebar holding the site header, search and a lazily loaded page tree, a resizable and collapsible sidebar that peeks on hover, a 44px top bar with the page actions, a Notion-style title block, quieter content blocks and quieter editor chrome.
+**Status:** release `3.3.0-kalon.3` is Wiki.js 3.3.0 with the frontend redesign: Inter and calm light and dark tokens, a sidebar holding the site header, search and a lazily loaded page tree, a resizable and collapsible sidebar that peeks on hover, a 44px top bar with the page actions, a Notion-style title block, quieter content blocks and quieter editor chrome, and drawings that start in a clean sans serif font.
 `3.3.0-kalon.1` was stock Wiki.js 3.3.0 plus documentation and CI.
 `KALON.md` lists every change.
 
@@ -30,7 +30,7 @@ In your existing compose file, change only the image line:
 ```yaml
 services:
   wiki:
-    image: ghcr.io/wesleybldc/wiki-kalon:3.3.0-kalon.2
+    image: ghcr.io/wesleybldc/wiki-kalon:3.3.0-kalon.3
     # everything else stays as it was
 ```
 
