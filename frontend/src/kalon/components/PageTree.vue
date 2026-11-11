@@ -97,7 +97,16 @@
           role="treeitem"
           aria-disabled="true"
           :aria-level="row.depth + 1">
-          {{ row.label }}
+          <!-- -> A level the server capped: the rest of it is in the file manager, for whoever may open it -->
+          <button
+            v-if="row.folderPath !== undefined"
+            type="button"
+            class="kalon-tree-more"
+            @click="siteStore.openFileManager({ folderPath: row.folderPath })">
+            <w-icon name="la:arrow-right" size="xs" />
+            <span>{{ t('kalon.tree.moreInFileManager') }}</span>
+          </button>
+          <template v-else>{{ row.label }}</template>
         </div>
       </template>
     </div>
@@ -170,6 +179,11 @@ const locale = computed(() => pageStore.locale || siteStore.locales.primary || '
  */
 const canAdd = computed(() => userStore.authenticated && userStore.canWriteOnSite)
 
+/** Who may open the file manager, as the Library menu (`HeaderLibraryMenu.vue`) decides it. */
+const canUseFileManager = computed(
+  () => userStore.can('write:assets') || userStore.can('write:pages')
+)
+
 const rows = computed(() => {
   const out = []
   walk('', 0, out)
@@ -209,7 +223,13 @@ function walk(path, depth, out) {
     out.push({ kind: 'note', key: `${path}:empty`, depth, label: t('common.browse.empty') })
   }
   if (level.truncated) {
-    out.push({ kind: 'note', key: `${path}:more`, depth, label: t('common.browse.truncated') })
+    out.push({
+      kind: 'note',
+      key: `${path}:more`,
+      depth,
+      label: t('common.browse.truncated'),
+      ...(canUseFileManager.value ? { folderPath: path } : {})
+    })
   }
 }
 
@@ -461,6 +481,29 @@ onBeforeUnmount(() => {
 
   @media (pointer: coarse) {
     min-height: 44px;
+  }
+}
+
+.kalon-tree-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--kalon-text-2);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--kalon-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--kalon-accent);
+    outline-offset: 2px;
+    border-radius: var(--kalon-radius-xs);
   }
 }
 
