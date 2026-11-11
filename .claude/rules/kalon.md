@@ -6,6 +6,10 @@ paths:
   - "KALON.md"
   - ".github/README.md"
   - ".github/workflows/kalon-*.yml"
+  - ".claude/hooks/**"
+  - ".claude/settings.json"
+  - ".claude/rules/kalon.md"
+  - "dev/kalon/**"
 ---
 
 # Kalon fork rules
@@ -22,7 +26,7 @@ It customizes only the frontend and replays onto each new upstream release, so e
 - **No database changes and no new stored settings.** Add no npm dependencies unless unavoidable, and pin any exactly.
 - **Tokens before selectors.** Restyle by overriding upstream CSS variables. Name new variables `--kalon-*`, classes `.kalon-*` and i18n keys `kalon.*`.
 - **Overrides win on specificity, not order.** Upstream component styles load in lazy chunks after ours, so prefix every rule in `_overrides.scss` with `:root` (and name `body` where upstream keys off `body--light` or `body--dark`). See the Theming reference in `KALON.md`.
-- **New text strings.** The only locale file is upstream's `backend/locales/en.json`, which cannot carry a `kalon:` marker. Reuse existing keys where they fit; otherwise keep Kalon's strings in `frontend/src/kalon/` and merge them after the locale loads.
+- **New text strings.** The only locale file is upstream's `backend/locales/en.json`, which cannot carry a `kalon:` marker. Reuse existing keys where they fit; otherwise add them to `frontend/src/kalon/i18n.js` and call `useKalonI18n()` instead of `useI18n()`: a local i18n scope that finds `kalon.*` keys there and falls back to upstream's strings.
 - **Work on every screen.** Phone, tablet and desktop, with upstream breakpoints and the narrow layout mode (the sidebar becomes an overlay below `SIDEBAR_OVERLAY_BELOW` in `frontend/src/layouts/MainLayout.vue`). Touch targets are at least 44px and nothing scrolls horizontally. Check light and dark mode (`body--dark`), keyboard use and WCAG AA contrast.
 - **Work with every editor and content path.** Markdown, Visual, AsciiDoc, Excalidraw, Git sync and MCP edits.
 - **Checks run themselves.** `.claude/settings.json` formats (Kalon files only) and lints each frontend file after an agent edits it, and hands lint errors back; the git pre-commit hook (`.claude/hooks/kalon-pre-commit.sh`, install per `KALON.md`) runs oxlint, oxfmt, the icon check and the build. Fix what they report; never skip them with `--no-verify`. Format an upstream file only on the lines you changed. Upstream's `.gitignore` ignores `.claude/*` apart from rules and skills, so stage a changed hook or `settings.json` with `git add -f`. A global `core.hooksPath` makes git skip `.git/hooks`; `KALON.md` has the fix.

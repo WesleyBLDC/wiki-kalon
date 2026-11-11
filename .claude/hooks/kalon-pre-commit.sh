@@ -4,7 +4,8 @@
 #   ln -sf ../../.claude/hooks/kalon-pre-commit.sh .git/hooks/pre-commit
 #
 # Runs only when the commit touches `frontend/`: oxlint over the frontend, oxfmt on the staged Kalon
-# files, the icon bundle check, and a production build. The build needs Node 26 on PATH, as the
+# files, the icon bundle check, and a production build into a scratch folder. Lint and build read the
+# working tree, so stage whole files. The build needs Node 26 on PATH, as the
 # frontend does. Per-file formatting and lint already ran as each file was edited
 # (`.claude/hooks/kalon-check-file.sh`).
 
@@ -27,11 +28,21 @@ bin=./node_modules/.bin
 echo "kalon pre-commit: oxlint"
 "$bin/oxlint" --quiet
 
+# -> The staged copy of each file, not the working tree's, so a partly staged file is judged by what
+#    the commit will hold
 kalon_files=$(printf '%s\n' "$staged" | grep -E '^frontend/src/kalon/.*\.(vue|js|mjs|scss|css)$' | sed 's#^frontend/##' || true)
 if [ -n "$kalon_files" ]; then
   echo "kalon pre-commit: oxfmt"
-  # shellcheck disable=SC2086
-  "$bin/oxfmt" --check $kalon_files
+  unformatted=''
+  for f in $kalon_files; do
+    if ! git show ":frontend/$f" | "$bin/oxfmt" --stdin-filepath="$f" | cmp -s - <(git show ":frontend/$f"); then
+      unformatted="$unformatted $f"
+    fi
+  done
+  if [ -n "$unformatted" ]; then
+    echo "kalon pre-commit: not formatted (run oxfmt on them and stage again):$unformatted" >&2
+    exit 1
+  fi
 fi
 
 echo "kalon pre-commit: icon bundle"
@@ -39,9 +50,11 @@ npm run --silent icons:check
 
 echo "kalon pre-commit: build"
 log=$(mktemp)
-trap 'rm -f "$log"' EXIT
-# -> The build's warnings are upstream's own; shown only when the build fails
-if ! npm run --silent build >"$log" 2>&1; then
+out=$(mktemp -d)
+trap 'rm -rf "$log" "$out"' EXIT
+# -> Into a scratch folder rather than `../assets`, so a check never swaps the files a running local
+#    backend is serving. The build's warnings are upstream's own; shown only when the build fails
+if ! npm run --silent build -- --outDir "$out" >"$log" 2>&1; then
   cat "$log" >&2
   exit 1
 fi
