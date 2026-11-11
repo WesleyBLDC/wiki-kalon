@@ -43,6 +43,27 @@ They are also in `.claude/rules/kalon.md` for agents.
 10. **Generic.** Nothing about any particular deployment: no real domains, emails, company or team names, ids, servers or screenshots of real content. Examples use `example.com`.
 11. **Upstreamable.** Generic improvements are offered to `requarks/wiki` as small PRs, following its `.github/CONTRIBUTING.md`. Each accepted PR is a commit we stop carrying.
 
+## Theming reference
+
+How the Wiki.js 3 frontend is styled, for Kalon look work (checked against 3.3.0).
+
+- Vue 3 on Vite, Tailwind CSS 4 and the in-repo `W` component library in `frontend/src/components/shared/`; no Vuetify or Quasar.
+- Design tokens are CSS variables: the `@theme static` block in `frontend/src/css/tailwind.css` and `frontend/src/css/_theme.scss`. Page content styles are in `_page-contents.scss` (and `_page-contents-asciidoc.scss`), chrome in `_page-chrome.scss`, the visual editor in `_visual-editor.scss`.
+- Stock defaults that make it look dated: header `--q-header: #000`, Material blue `--q-primary: #1976d2`, `--font-sans: 'Roboto', ...`, very large thin headings (`--text-h1: 6rem` at weight 300, `--text-h2: 3.75rem` at weight 300).
+- Useful tokens: `--q-primary`, `--q-secondary`, `--q-accent`, `--q-header`, `--q-sidebar` (and their `--color-*` mirrors with `-light` and `-lighter` mixes), `--color-dark-1` to `--color-dark-6`, `--color-grey-*`, `--font-sans`, `--font-mono`, `--text-h1` to `--text-h6` with their `--font-weight` and `--line-height`.
+- Dark mode is the `body--dark` class (`frontend/src/composables/dark.js`); users already get a site, light or dark choice in the account menu and their profile, so Kalon defines token sets for both modes and adds no toggle logic.
+- Admin > Theme still works on top of Kalon: the backend injects a site's CSS override into the served page (`backend/helpers/appShell.ts`), never inside `/_admin`.
+
+Community themes: as of November 2026 none targets Wiki.js 3; they are CSS for 2.x (Vuetify) and must be ported, not pasted.
+Check one with:
+
+```sh
+grep -c -E 'v-navigation-drawer|v-application|theme--(dark|light)|v-toolbar' theme.css   # 2.x selectors
+grep -c -E -- '--color-primary|--font-sans|body--dark|--q-primary' theme.css            # 3.x tokens
+```
+
+The most useful design reference is `Tom-Stadermann/Wiki-js-shadcn-theme` (shadcn/ui look: zinc greys, 1px borders, rounded cards, Inter, restyled callouts), written for 2.x.
+
 ## Release
 
 1. Make sure the carried commits table above is current.
