@@ -6,6 +6,8 @@
     :class="siteStore.theme.sidebarPosition === `right` ? `sidebar-nav--flipped` : ``"
     :thumb-style="thumbStyle"
     :bar-style="barStyle">
+    <!-- kalon: "Menu" over the curated links, as "Pages" heads the tree (kalon/components/SidebarMenuLabel.vue) -->
+    <sidebar-menu-label v-if="siteStore.nav.items.length > 0" />
     <w-list class="sidebar-nav-list" clickable dense dark>
       <!-- -> Only in a menu opened from a `menu` item: back to the one it was opened from -->
       <template v-if="siteStore.nav.stack.length > 0">
@@ -117,6 +119,7 @@ import { useSiteStore } from '@/stores/site'
 
 // kalon: the page tree rendered under the curated menu
 import PageTree from '@/kalon/components/PageTree.vue'
+import SidebarMenuLabel from '@/kalon/components/SidebarMenuLabel.vue'
 
 // STORES
 

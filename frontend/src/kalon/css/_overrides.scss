@@ -718,35 +718,19 @@
 /*
   With the page tree in the sidebar, the Browse button does the same job twice, so it goes; the tree
   and the button share the "Allow Browsing" setting, so they never appear apart. Found by its icon
-  (`WIcon` marks every icon with `data-icon`). The locale button, if the site shows one, moves down to
-  sit above the footer, and the bar goes entirely when Browse was all it held.
+  (`WIcon` marks every icon with `data-icon`); the bar goes entirely when Browse was all it held.
 */
 :root .w-drawer:has(.kalon-tree) {
   .sidebar-actions .w-btn:has([data-icon='la:sitemap']),
-  .sidebar-actions .sidebar-actions-sep {
+  .sidebar-actions .sidebar-actions-sep,
+  .sidebar-actions:not(:has([data-icon='la:globe'])) {
     display: none;
-  }
-  .sidebar-actions:not(:has(> .w-btn:not(:has([data-icon='la:sitemap'])))) {
-    display: none;
-  }
-  .sidebar-actions {
-    order: 1;
-    height: 36px;
-    padding: 0 8px;
-    box-shadow: inset 0 1px 0 var(--kalon-border);
-
-    .w-btn {
-      flex: none;
-    }
-  }
-  .sidebar-footerbtns {
-    order: 2;
-    min-height: 36px;
   }
 
   // -> Sentence case at the interface size, rather than upstream's small capitals
   .sidebar-actions .w-btn,
   .sidebar-footerbtns .w-btn {
+    flex: none;
     justify-content: flex-start;
     min-height: 32px;
     padding-inline: 8px;
@@ -759,8 +743,56 @@
   .sidebar-actions .w-btn {
     text-transform: uppercase;
   }
-  .kalon-sidebar-footer {
-    order: 3;
+}
+
+/*
+  The bottom of the full sidebar on a wide screen, as the board lays it out: the locale button and Edit
+  Nav side by side on one row, the account row under them. The drawer is a column of upstream's own
+  pieces, so it becomes a grid to put two of them on one row without moving either in the markup.
+  The resize handle is positioned, so it stays out of the grid.
+*/
+:root .w-drawer:has(> .kalon-sidebar-footer) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+
+  > .kalon-sidebar-header,
+  > .sidebar-nav,
+  > .sidebar-actions,
+  > .sidebar-footerbtns,
+  > .kalon-sidebar-footer {
+    grid-column: 1 / -1;
+  }
+  > .kalon-sidebar-header {
+    grid-row: 1;
+  }
+  > .sidebar-nav {
+    grid-row: 2;
+    min-height: 0;
+  }
+  > .sidebar-actions,
+  > .sidebar-footerbtns {
+    grid-row: 3;
+    align-items: center;
+    height: auto;
+    min-height: 40px;
+    padding: 0 8px;
+    box-shadow: inset 0 1px 0 var(--kalon-border);
+  }
+  > .kalon-sidebar-footer {
+    grid-row: 4;
+  }
+}
+:root
+  .w-drawer:has(> .kalon-sidebar-footer):has(> .sidebar-actions [data-icon='la:globe']):has(
+    > .sidebar-footerbtns
+  ) {
+  > .sidebar-actions {
+    grid-column: 1;
+  }
+  > .sidebar-footerbtns {
+    grid-column: 2;
+    box-shadow: inset 0 1px 0 var(--kalon-border);
   }
 }
 
@@ -791,6 +823,14 @@
   .header-search-field {
     height: 32px;
   }
+}
+
+// -> While the sidebar is collapsed, the top bar starts after the glyph that brings it back
+:root body:has(.kalon-sidebar-expand:not(.is-right)) .page-breadcrumbs {
+  padding-left: 52px;
+}
+:root body:has(.kalon-sidebar-expand.is-right) .page-breadcrumbs {
+  padding-right: 52px;
 }
 
 /* ---------------------------------------------------------------------------------------------- */

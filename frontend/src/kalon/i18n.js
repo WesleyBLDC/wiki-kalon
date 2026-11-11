@@ -22,7 +22,12 @@ export const kalonMessages = {
       sidebar: {
         resize: 'Resize sidebar',
         collapse: 'Collapse sidebar',
-        expand: 'Expand sidebar'
+        expand: 'Expand sidebar',
+        back: 'Back',
+        forward: 'Forward',
+        menu: 'Menu',
+        darkMode: 'Switch to dark mode',
+        lightMode: 'Switch to light mode'
       },
       page: {
         more: 'More actions',

@@ -1,7 +1,7 @@
 <template>
   <w-layout>
-    <!-- kalon: on a wide screen the header's contents move into the sidebar (`kalonHeaderInSidebar`) -->
-    <w-header v-if="!kalonHeaderInSidebar" class="site-header-wrap">
+    <!-- kalon: on a wide screen the header's contents move into the sidebar, collapsed or not (`kalonHidesSiteHeader`) -->
+    <w-header v-if="!kalonHidesSiteHeader" class="site-header-wrap">
       <header-nav />
     </w-header>
     <!--
@@ -123,6 +123,11 @@
       `.corner-btn`. No margin, so the button is not a disc hovering near the edge of a small screen but
       a piece of the screen's own corner, and every pixel of it is inside the viewport.
     -->
+    <!-- kalon: a wide screen's collapsed sidebar comes back from the same glyph, in the top corner -->
+    <sidebar-toggle-button
+      v-if="kalonShowsExpandBtn"
+      class="kalon-sidebar-expand"
+      :class="{ 'is-right': siteStore.theme.sidebarPosition === `right` }" />
     <transition name="corner-btn">
       <div v-if="showSidebarBtn" class="fixed bottom-0 left-0 z-30">
         <w-btn
@@ -203,7 +208,13 @@ import SidebarFooter from '@/kalon/components/SidebarFooter.vue'
 import SidebarHeader from '@/kalon/components/SidebarHeader.vue'
 // kalon: the sidebar's width and collapsed state on a wide screen
 import SidebarResizeHandle from '@/kalon/components/SidebarResizeHandle.vue'
-import { setSidebarCollapsed, useSidebarLayout } from '@/kalon/composables/sidebarLayout'
+import SidebarToggleButton from '@/kalon/components/SidebarToggleButton.vue'
+import {
+  SIDEBAR_MODE,
+  setSidebarCollapsed,
+  sidebarModeFor,
+  useSidebarLayout
+} from '@/kalon/composables/sidebarLayout'
 import NavSidebar from '@/components/NavSidebar.vue'
 import NavEditMenu from '@/components/NavEditMenu.vue'
 import MainOverlayDialog from '@/components/MainOverlayDialog.vue'
@@ -257,7 +268,11 @@ const navEditMenuMini = ref(null)
 const isNarrowSidebarOpen = ref(false)
 
 // kalon: width and collapsed state on a wide screen, and Ctrl+\ to collapse
-const kalonLayout = useSidebarLayout({ isBlocked: () => siteStore.overlayIsShown })
+const kalonLayout = useSidebarLayout({
+  isBlocked: () => siteStore.overlayIsShown,
+  isCollapsible: () => kalonHidesSiteHeader.value,
+  canSearch: () => siteStore.features.search
+})
 
 // COMPUTED
 
@@ -300,7 +315,9 @@ const isSidebarAvailable = computed(() => {
   return (
     siteStore.showSideNav &&
     !siteStore.sideNavIsDisabled &&
-    !(editorStore.isActive && editorStore.hideSideNav)
+    // kalon: an editor asking for the whole width gets it on a narrow screen only; a wide screen keeps
+    // the sidebar, which the reader collapses with Ctrl+\ if they want the room
+    !(editorStore.isActive && editorStore.hideSideNav && !isWideViewport.value)
   )
 })
 
@@ -313,12 +330,11 @@ const isSidebarAvailable = computed(() => {
  * closed when its scrim is tapped, and with no listener for that the request went nowhere.
  */
 const isSidebarOpen = computed({
-  // kalon: a wide screen's sidebar can be collapsed (the icon rail never is)
+  // kalon: from the sidebar's shape, since a wide screen's full sidebar can be collapsed
   get: () =>
-    isSidebarAvailable.value &&
-    (isWideViewport.value
-      ? isSidebarMini.value || !kalonLayout.collapsed
-      : isNarrowSidebarOpen.value),
+    kalonSidebarMode.value === SIDEBAR_MODE.OVERLAY
+      ? isNarrowSidebarOpen.value
+      : [SIDEBAR_MODE.RAIL, SIDEBAR_MODE.OPEN].includes(kalonSidebarMode.value),
   // -> Only ever reached from the scrim, which exists only while overlaying
   set: (val) => {
     isNarrowSidebarOpen.value = val
@@ -331,13 +347,7 @@ const isSidebarOpen = computed({
   panel in any case.
 */
 const showSidebarBtn = computed(() => {
-  // kalon: also the way back to a wide screen's collapsed sidebar
-  return (
-    isSidebarAvailable.value &&
-    (isWideViewport.value
-      ? kalonLayout.collapsed && !isSidebarMini.value
-      : !isNarrowSidebarOpen.value)
-  )
+  return isSidebarAvailable.value && !isWideViewport.value && !isNarrowSidebarOpen.value
 })
 
 const isSidebarMini = computed(() => {
@@ -348,22 +358,31 @@ const isSidebarMini = computed(() => {
 const SIDEBAR_WIDTH = 255
 const SIDEBAR_WIDTH_MINI = 56
 
-// kalon: a wide screen's sidebar takes the width the reader dragged it to
-const sidebarWidth = computed(() =>
-  isSidebarMini.value
-    ? SIDEBAR_WIDTH_MINI
-    : isWideViewport.value
-      ? kalonLayout.width
-      : SIDEBAR_WIDTH
+/*
+  kalon: the sidebar's one current shape (`SIDEBAR_MODE` in kalon/composables/sidebarLayout.js). The
+  drawer's width and contents, the site header and the button bringing a collapsed sidebar back are
+  all read off it, rather than each combining the viewport, availability, rail and collapsed state.
+*/
+const kalonSidebarMode = computed(() =>
+  sidebarModeFor({
+    isAvailable: isSidebarAvailable.value,
+    isWide: isWideViewport.value,
+    isRail: isSidebarMini.value
+  })
 )
+const kalonIsFullWide = computed(() =>
+  [SIDEBAR_MODE.OPEN, SIDEBAR_MODE.COLLAPSED].includes(kalonSidebarMode.value)
+)
+// -> No site header beside a wide screen's full sidebar, open or collapsed (Ctrl+K opens it on search)
+const kalonHidesSiteHeader = computed(() => kalonIsFullWide.value)
+// -> The header's contents live in the sidebar while it is open
+const kalonHeaderInSidebar = computed(() => kalonSidebarMode.value === SIDEBAR_MODE.OPEN)
+// -> The glyph in the top corner brings a collapsed sidebar back
+const kalonShowsExpandBtn = computed(() => kalonSidebarMode.value === SIDEBAR_MODE.COLLAPSED)
 
-// kalon: the header folds into the sidebar where the sidebar is a full column of its own
-const kalonHeaderInSidebar = computed(
-  () =>
-    isWideViewport.value &&
-    isSidebarAvailable.value &&
-    !isSidebarMini.value &&
-    !kalonLayout.collapsed
+// kalon: a wide screen's full sidebar takes the width the reader dragged it to
+const sidebarWidth = computed(() =>
+  isSidebarMini.value ? SIDEBAR_WIDTH_MINI : kalonIsFullWide.value ? kalonLayout.width : SIDEBAR_WIDTH
 )
 
 /*

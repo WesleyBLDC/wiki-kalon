@@ -5,21 +5,29 @@
         <img class="kalon-sidebar-logo" :src="`/_site/current/logo`" alt="" />
         <span v-if="siteStore.logoText" class="kalon-sidebar-title">{{ siteStore.title }}</span>
       </router-link>
-      <w-btn
-        class="kalon-sidebar-collapse"
-        flat
-        dense
-        round
-        size="sm"
-        :aria-label="t('kalon.sidebar.collapse')"
-        @click="setSidebarCollapsed(true)">
-        <!-- -> Drawn here rather than taken from the icon bundle, which has no sidebar glyph -->
-        <svg class="kalon-sidebar-glyph" viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
-          <path d="M9.5 4.5v15" />
-        </svg>
-        <w-tooltip>{{ t('kalon.sidebar.collapse') }} (Ctrl+\)</w-tooltip>
-      </w-btn>
+      <div class="kalon-sidebar-history">
+        <w-btn
+          flat
+          dense
+          round
+          size="sm"
+          icon="la:angle-left"
+          :aria-label="t('kalon.sidebar.back')"
+          @click="router.back()">
+          <w-tooltip>{{ t('kalon.sidebar.back') }}</w-tooltip>
+        </w-btn>
+        <w-btn
+          flat
+          dense
+          round
+          size="sm"
+          icon="la:angle-right"
+          :aria-label="t('kalon.sidebar.forward')"
+          @click="router.forward()">
+          <w-tooltip>{{ t('kalon.sidebar.forward') }}</w-tooltip>
+        </w-btn>
+      </div>
+      <sidebar-toggle-button />
     </div>
     <div class="kalon-sidebar-search">
       <header-search />
@@ -28,20 +36,24 @@
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
+
 import { useSiteStore } from '@/stores/site'
 
 import HeaderSearch from '@/components/HeaderSearch.vue'
 
-import { setSidebarCollapsed } from '../composables/sidebarLayout'
 import { useSiteHome } from '../composables/siteHome'
 import { useKalonI18n } from '../i18n'
+import SidebarToggleButton from './SidebarToggleButton.vue'
 
 /**
  * The top of the sidebar on a wide screen, where the site header is folded away: the logo and site
- * title leading home, a button collapsing the sidebar, and upstream's search field (`HeaderSearch`,
- * Ctrl+K and all) under them.
+ * title leading home, back and forward through the browser's history, a button collapsing the
+ * sidebar, and upstream's search field (`HeaderSearch`, Ctrl+K and all) under them. A narrow sidebar
+ * drops back and forward and the search field's shortcut hint.
  */
 
+const router = useRouter()
 const siteStore = useSiteStore()
 const { homePath, leaveEditorForHome } = useSiteHome()
 const { t } = useKalonI18n()
@@ -49,6 +61,7 @@ const { t } = useKalonI18n()
 
 <style lang="scss">
 .kalon-sidebar-header {
+  container: kalon-sidebar / inline-size;
   flex: none;
   padding: 8px 8px 4px;
 }
@@ -90,21 +103,22 @@ const { t } = useKalonI18n()
   object-fit: contain;
 }
 
-.kalon-sidebar-collapse {
+.kalon-sidebar-history {
+  display: flex;
   flex: none;
   color: var(--kalon-text-2);
 
-  &:hover {
+  .w-btn:hover {
     background-color: var(--kalon-hover);
+    color: var(--kalon-text);
   }
 }
 
-.kalon-sidebar-glyph {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
+@container kalon-sidebar (max-width: 231px) {
+  .kalon-sidebar-history,
+  .kalon-sidebar-search .header-search-kbd {
+    display: none;
+  }
 }
 
 .kalon-sidebar-title {

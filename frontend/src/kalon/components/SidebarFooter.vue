@@ -51,6 +51,7 @@
             :label="notificationsStore.badge" />
           <w-tooltip>{{ inboxLabel }}</w-tooltip>
         </w-btn>
+        <appearance-toggle />
         <w-btn
           v-if="userStore.can(`access:admin`)"
           flat
@@ -82,6 +83,7 @@
         <w-tooltip>{{ t('common.header.library') }}</w-tooltip>
         <header-library-menu />
       </w-btn>
+      <appearance-toggle />
     </template>
   </div>
 </template>
@@ -98,10 +100,13 @@ import AccountMenu from '@/components/AccountMenu.vue'
 import HeaderLibraryMenu from '@/components/HeaderLibraryMenu.vue'
 import NewMenu from '@/components/PageNewMenu.vue'
 
+import AppearanceToggle from './AppearanceToggle.vue'
+
 /**
  * The bottom of the sidebar on a wide screen, where the site header is folded away: the account, and
- * the header's New, Library, Inbox and Admin buttons, behind the same conditions `HeaderNav` uses.
- * The appearance switch is the account menu's own.
+ * the header's New, Library, Inbox and Admin buttons, behind the same conditions `HeaderNav` uses, and
+ * a light and dark switch (`AppearanceToggle.vue`). A narrow sidebar keeps the avatar and the buttons
+ * and drops the name.
  */
 
 const liveNoteStore = useLiveNoteStore()
@@ -141,6 +146,7 @@ watch(
 
 <style lang="scss">
 .kalon-sidebar-footer {
+  container: kalon-sidebar-footer / inline-size;
   display: flex;
   flex: none;
   align-items: center;
@@ -192,6 +198,15 @@ watch(
   flex: none;
   align-items: center;
   gap: 2px;
+}
+
+@container kalon-sidebar-footer (max-width: 230px) {
+  .kalon-sidebar-name {
+    display: none;
+  }
+  .kalon-sidebar-actions {
+    gap: 0;
+  }
 }
 
 .kalon-sidebar-login {
