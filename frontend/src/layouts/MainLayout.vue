@@ -102,6 +102,7 @@
           </w-btn>
         </w-bar>
         <sidebar-footer v-if="kalonHeaderInSidebar" />
+        <sidebar-resize-handle v-if="kalonHeaderInSidebar" :side="siteStore.theme.sidebarPosition" />
       </template>
     </w-drawer>
     <!--
@@ -200,6 +201,9 @@ import NavBrowseMenu from '@/components/NavBrowseMenu.vue'
 // kalon: the header's contents in the sidebar on a wide screen
 import SidebarFooter from '@/kalon/components/SidebarFooter.vue'
 import SidebarHeader from '@/kalon/components/SidebarHeader.vue'
+// kalon: the sidebar's width and collapsed state on a wide screen
+import SidebarResizeHandle from '@/kalon/components/SidebarResizeHandle.vue'
+import { setSidebarCollapsed, useSidebarLayout } from '@/kalon/composables/sidebarLayout'
 import NavSidebar from '@/components/NavSidebar.vue'
 import NavEditMenu from '@/components/NavEditMenu.vue'
 import MainOverlayDialog from '@/components/MainOverlayDialog.vue'
@@ -251,6 +255,9 @@ const navEditMenuMini = ref(null)
  * sidebar is a column that is simply there.
  */
 const isNarrowSidebarOpen = ref(false)
+
+// kalon: width and collapsed state on a wide screen, and Ctrl+\ to collapse
+const kalonLayout = useSidebarLayout({ isBlocked: () => siteStore.overlayIsShown })
 
 // COMPUTED
 
@@ -306,7 +313,12 @@ const isSidebarAvailable = computed(() => {
  * closed when its scrim is tapped, and with no listener for that the request went nowhere.
  */
 const isSidebarOpen = computed({
-  get: () => isSidebarAvailable.value && (isWideViewport.value || isNarrowSidebarOpen.value),
+  // kalon: a wide screen's sidebar can be collapsed (the icon rail never is)
+  get: () =>
+    isSidebarAvailable.value &&
+    (isWideViewport.value
+      ? isSidebarMini.value || !kalonLayout.collapsed
+      : isNarrowSidebarOpen.value),
   // -> Only ever reached from the scrim, which exists only while overlaying
   set: (val) => {
     isNarrowSidebarOpen.value = val
@@ -319,7 +331,13 @@ const isSidebarOpen = computed({
   panel in any case.
 */
 const showSidebarBtn = computed(() => {
-  return isSidebarAvailable.value && !isWideViewport.value && !isNarrowSidebarOpen.value
+  // kalon: also the way back to a wide screen's collapsed sidebar
+  return (
+    isSidebarAvailable.value &&
+    (isWideViewport.value
+      ? kalonLayout.collapsed && !isSidebarMini.value
+      : !isNarrowSidebarOpen.value)
+  )
 })
 
 const isSidebarMini = computed(() => {
@@ -330,11 +348,22 @@ const isSidebarMini = computed(() => {
 const SIDEBAR_WIDTH = 255
 const SIDEBAR_WIDTH_MINI = 56
 
-const sidebarWidth = computed(() => (isSidebarMini.value ? SIDEBAR_WIDTH_MINI : SIDEBAR_WIDTH))
+// kalon: a wide screen's sidebar takes the width the reader dragged it to
+const sidebarWidth = computed(() =>
+  isSidebarMini.value
+    ? SIDEBAR_WIDTH_MINI
+    : isWideViewport.value
+      ? kalonLayout.width
+      : SIDEBAR_WIDTH
+)
 
 // kalon: the header folds into the sidebar where the sidebar is a full column of its own
 const kalonHeaderInSidebar = computed(
-  () => isWideViewport.value && isSidebarAvailable.value && !isSidebarMini.value
+  () =>
+    isWideViewport.value &&
+    isSidebarAvailable.value &&
+    !isSidebarMini.value &&
+    !kalonLayout.collapsed
 )
 
 /*
@@ -349,7 +378,8 @@ const kalonHeaderInSidebar = computed(
 const scrollerAnchorX = computed(() => {
   // -> No separate test for `sidebarPosition === 'off'`: that IS `sideNavIsDisabled`, which
   //    `isSidebarAvailable` already asks
-  if (!isWideViewport.value || !isSidebarAvailable.value) {
+  // kalon: nor while a wide screen's sidebar is collapsed
+  if (!isWideViewport.value || !isSidebarAvailable.value || !isSidebarOpen.value) {
     return null
   }
   return siteStore.theme.sidebarPosition === 'right' ? '100%' : `${sidebarWidth.value}px`
@@ -410,6 +440,8 @@ watch(
 
 function openSidebar() {
   isNarrowSidebarOpen.value = true
+  // kalon: and expands a wide screen's collapsed sidebar
+  setSidebarCollapsed(false)
 }
 </script>
 

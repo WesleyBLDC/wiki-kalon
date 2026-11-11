@@ -5,7 +5,21 @@
         <img class="kalon-sidebar-logo" :src="`/_site/current/logo`" alt="" />
         <span v-if="siteStore.logoText" class="kalon-sidebar-title">{{ siteStore.title }}</span>
       </router-link>
-      <slot name="actions" />
+      <w-btn
+        class="kalon-sidebar-collapse"
+        flat
+        dense
+        round
+        size="sm"
+        :aria-label="t('kalon.sidebar.collapse')"
+        @click="setSidebarCollapsed(true)">
+        <!-- -> Drawn here rather than taken from the icon bundle, which has no sidebar glyph -->
+        <svg class="kalon-sidebar-glyph" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+          <path d="M9.5 4.5v15" />
+        </svg>
+        <w-tooltip>{{ t('kalon.sidebar.collapse') }} (Ctrl+\)</w-tooltip>
+      </w-btn>
     </div>
     <div class="kalon-sidebar-search">
       <header-search />
@@ -18,15 +32,19 @@ import { useSiteStore } from '@/stores/site'
 
 import HeaderSearch from '@/components/HeaderSearch.vue'
 
+import { setSidebarCollapsed } from '../composables/sidebarLayout'
 import { useSiteHome } from '../composables/siteHome'
+import { useKalonI18n } from '../i18n'
 
 /**
  * The top of the sidebar on a wide screen, where the site header is folded away: the logo and site
- * title leading home, and upstream's search field (`HeaderSearch`, Ctrl+K and all) under them.
+ * title leading home, a button collapsing the sidebar, and upstream's search field (`HeaderSearch`,
+ * Ctrl+K and all) under them.
  */
 
 const siteStore = useSiteStore()
 const { homePath, leaveEditorForHome } = useSiteHome()
+const { t } = useKalonI18n()
 </script>
 
 <style lang="scss">
@@ -70,6 +88,23 @@ const { homePath, leaveEditorForHome } = useSiteHome()
   height: 22px;
   border-radius: var(--kalon-radius-xs);
   object-fit: contain;
+}
+
+.kalon-sidebar-collapse {
+  flex: none;
+  color: var(--kalon-text-2);
+
+  &:hover {
+    background-color: var(--kalon-hover);
+  }
+}
+
+.kalon-sidebar-glyph {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
 }
 
 .kalon-sidebar-title {

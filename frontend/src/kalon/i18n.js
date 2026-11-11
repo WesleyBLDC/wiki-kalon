@@ -18,6 +18,11 @@ export const kalonMessages = {
         newPageIn: 'New page in {title}',
         expand: 'Expand {title}',
         collapse: 'Collapse {title}'
+      },
+      sidebar: {
+        resize: 'Resize sidebar',
+        collapse: 'Collapse sidebar',
+        expand: 'Expand sidebar'
       }
     }
   }

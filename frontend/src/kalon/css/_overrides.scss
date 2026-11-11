@@ -497,3 +497,12 @@
     height: 32px;
   }
 }
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Sidebar resize                                                                                 */
+/* ---------------------------------------------------------------------------------------------- */
+
+// -> The positioning context for the resize handle on its inner edge, while the drawer is a column
+:root .w-drawer.bg-sidebar:not(.w-drawer--overlay) {
+  position: relative;
+}
