@@ -18,7 +18,8 @@ export const kalonMessages = {
         newPageIn: 'New page in {title}',
         expand: 'Expand {title}',
         collapse: 'Collapse {title}',
-        moreInFileManager: 'More in the file manager…'
+        moreInFileManager: 'More in the file manager…',
+        retry: 'Try again'
       },
       sidebar: {
         resize: 'Resize sidebar',

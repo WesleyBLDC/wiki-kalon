@@ -39,9 +39,9 @@
           :aria-posinset="row.position"
           :aria-expanded="row.item.isFolder ? isOpen(row.item.path) : undefined"
           :aria-current="row.isCurrent ? 'page' : undefined"
-          :tabindex="row.key === focusKey ? 0 : -1"
+          :tabindex="row.key === tabKey ? 0 : -1"
           :data-key="row.key"
-          @focus="focusKey = row.key">
+          @focusin="focusKey = row.key">
           <button
             v-if="row.item.isFolder"
             type="button"
@@ -99,13 +99,20 @@
           :aria-level="row.depth + 1">
           <!-- -> A level the server capped: the rest of it is in the file manager, for whoever may open it -->
           <button
-            v-if="row.folderPath !== undefined"
+            v-if="row.action === NOTE_ACTION.FILE_MANAGER"
             type="button"
             class="kalon-tree-more"
-            @click="siteStore.openFileManager({ folderPath: row.folderPath })">
+            @click="siteStore.openFileManager({ folderPath: row.path })">
             <w-icon name="la:arrow-right" size="xs" />
             <span>{{ t('kalon.tree.moreInFileManager') }}</span>
           </button>
+          <!-- -> A level that failed to load, asked for again on request -->
+          <template v-else-if="row.action === NOTE_ACTION.RETRY">
+            <span>{{ row.label }}</span>
+            <button type="button" class="kalon-tree-more" @click="loadLevel(row.path)">
+              {{ t('kalon.tree.retry') }}
+            </button>
+          </template>
           <template v-else>{{ row.label }}</template>
         </div>
       </template>
@@ -134,7 +141,13 @@ import { useUserStore } from '@/stores/user'
 
 import PageNewMenu from '@/components/PageNewMenu.vue'
 
-import { LEVEL_STATUS, ancestorsOf, usePageTree } from '../composables/pageTree'
+import {
+  LEVEL_STATUS,
+  LOAD_RESULT,
+  OPEN_REASON,
+  ancestorsOf,
+  usePageTree
+} from '../composables/pageTree'
 import { useKalonI18n } from '../i18n'
 
 /**
@@ -160,7 +173,21 @@ const router = useRouter()
 
 const { t } = useKalonI18n()
 
-const { state, setScope, load, itemsOf, takeMenu, setOpen, drop } = usePageTree()
+const {
+  state,
+  setScope,
+  load,
+  pendingLevel,
+  showsItems,
+  needsLoad,
+  itemsOf,
+  takeMenu,
+  setOpen,
+  markStale
+} = usePageTree()
+
+/** What a note row offers besides its text. */
+const NOTE_ACTION = Object.freeze({ FILE_MANAGER: 'fileManager', RETRY: 'retry' })
 
 const treeEl = ref(null)
 const focusKey = ref('')
@@ -171,6 +198,18 @@ const focusKey = ref('')
 const isShown = computed(() => Boolean(siteStore.features.browse && siteStore.id))
 
 const locale = computed(() => pageStore.locale || siteStore.locales.primary || 'en')
+
+/**
+ * The levels on screen: the root and every open folder whose parents are all open. One watcher loads
+ * those not held yet, so opening a folder, revealing a page and content changing elsewhere all come
+ * down to changing what is open or held.
+ */
+const shownPaths = computed(() => {
+  if (!isShown.value || state.scope !== `${siteStore.id}:${locale.value}`) {
+    return []
+  }
+  return ['', ...Object.keys(state.open).filter((path) => ancestorsOf(path).every(isOpen))]
+})
 
 /**
  * Whether to offer "+". `write:pages` is a page rule, so there is no way to ask the server whether
@@ -197,16 +236,32 @@ const rows = computed(() => {
 
 const itemRows = computed(() => rows.value.filter((r) => r.kind === 'item'))
 
+/**
+ * The one row reachable with Tab: the row last focused, or the current page's, and the first row when
+ * neither is on screen (a missing page, a collapsed folder), so the tree is never out of reach.
+ */
+const tabKey = computed(() =>
+  itemRows.value.some((r) => r.key === focusKey.value) ? focusKey.value : itemRows.value[0]?.key
+)
+
 // METHODS
 
 function walk(path, depth, out) {
   const level = state.levels[path]
-  if (!level || (level.status === LEVEL_STATUS.LOADING && level.items.length < 1)) {
-    out.push({ kind: 'note', key: `${path}:loading`, depth, label: t('common.loading') })
+  if (level?.status === LEVEL_STATUS.FAILED) {
+    out.push({
+      kind: 'note',
+      key: `${path}:failed`,
+      depth,
+      label: t('common.browse.loadFailed'),
+      action: NOTE_ACTION.RETRY,
+      path
+    })
     return
   }
-  if (level.status === LEVEL_STATUS.FAILED) {
-    out.push({ kind: 'note', key: `${path}:failed`, depth, label: t('common.browse.loadFailed') })
+  // -> Not asked for yet (the loader is about to) or on its way for the first time
+  if (!showsItems(level)) {
+    out.push({ kind: 'note', key: `${path}:loading`, depth, label: t('common.loading') })
     return
   }
   const items = itemsOf(level)
@@ -233,7 +288,8 @@ function walk(path, depth, out) {
       key: `${path}:more`,
       depth,
       label: t('common.browse.truncated'),
-      ...(canUseFileManager.value ? { folderPath: path } : {})
+      action: canUseFileManager.value ? NOTE_ACTION.FILE_MANAGER : null,
+      path
     })
   }
 }
@@ -248,27 +304,18 @@ function isOpen(path) {
   return Boolean(state.open[path])
 }
 
+// -> Only a real failure is worth a notice: a folder that is not there is dropped, and an answer made
+//    stale by a reload is replaced by the reload's own
 async function loadLevel(path) {
-  const ok = await load(siteStore.id, locale.value, path)
-  if (!ok) {
+  const result = await load(siteStore.id, locale.value, path)
+  if (result === LOAD_RESULT.FAILED) {
     notify({ type: 'negative', message: t('common.browse.loadFailed') })
   }
+  return result
 }
 
 function toggle(item) {
-  const next = !isOpen(item.path)
-  setOpen(item.path, next)
-  if (next) {
-    loadLevel(item.path)
-  }
-}
-
-/** Loads the root and every remembered open folder. */
-function loadVisible() {
-  loadLevel('')
-  for (const path of Object.keys(state.open)) {
-    loadLevel(path)
-  }
+  setOpen(item.path, !isOpen(item.path))
 }
 
 /** Opens the folders above the page being read and brings its row into view. */
@@ -278,11 +325,11 @@ async function revealCurrent() {
   }
   const folders = ancestorsOf(pageStore.path)
   for (const path of folders) {
-    if (!isOpen(path)) {
-      setOpen(path, true)
-    }
+    setOpen(path, true, OPEN_REASON.REVEALED)
   }
-  await Promise.all(['', ...folders].map((path) => loadLevel(path)))
+  // -> The loader runs before the next render, asking for what just came on screen; then wait for it
+  await nextTick()
+  await Promise.all(['', ...folders].map(pendingLevel))
   focusKey.value = pageStore.path
   await nextTick()
   treeEl.value?.querySelector('.kalon-tree-row.is-current')?.scrollIntoView({ block: 'nearest' })
@@ -296,6 +343,10 @@ function focusRow(key) {
 }
 
 function onKeydown(ev) {
+  // -> Keys pressed on a button inside a row or a note (the "+", "More in the file manager") are its own
+  if (!ev.target?.classList?.contains('kalon-tree-row')) {
+    return
+  }
   const list = itemRows.value
   const index = list.findIndex((r) => r.key === focusKey.value)
   const row = list[index]
@@ -361,8 +412,17 @@ watch(
       return
     }
     setScope(siteStore.id, locale.value, siteStore.localeUrlPrefix(locale.value))
-    loadVisible()
     revealCurrent()
+  },
+  { immediate: true }
+)
+
+watch(
+  () => shownPaths.value.filter(needsLoad),
+  (paths) => {
+    for (const path of paths) {
+      loadLevel(path)
+    }
   },
   { immediate: true }
 )
@@ -379,19 +439,16 @@ watch(
 // -> The curated sidebar reads its menu again after Edit Nav saves and on each page load
 watch(
   () => [siteStore.nav.currentId, siteStore.nav.items],
-  ([navId, items]) => takeMenu(navId, items)
+  ([navId, items]) => takeMenu(navId, items),
+  { immediate: true }
 )
 
 /*
-  A page created, moved, renamed or deleted anywhere changes what the levels hold. Debounced as the
-  curated menu's own refresh is (`NavSidebar`), since one save can fire several of these.
+  A page created, moved, renamed or deleted anywhere changes what the levels hold: they keep showing
+  what they held, and the loader fetches those on screen again. Debounced as the curated menu's own
+  refresh is (`NavSidebar`), since one save can fire several of these.
 */
-const onContentChanged = debounce(() => {
-  if (isShown.value) {
-    drop()
-    loadVisible()
-  }
-}, 300)
+const onContentChanged = debounce(markStale, 300)
 
 onMounted(() => {
   EVENT_BUS.on('contentChanged', onContentChanged)
@@ -600,5 +657,11 @@ onBeforeUnmount(() => {
   padding-inline: calc(32px + var(--kalon-tree-indent)) 8px;
   color: var(--kalon-text-3);
   font-size: 0.8125rem;
+
+  // -> "Try again" after the failure it answers
+  > span + .kalon-tree-more {
+    margin-inline-start: 8px;
+    color: var(--kalon-accent-text);
+  }
 }
 </style>

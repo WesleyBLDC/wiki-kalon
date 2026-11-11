@@ -13,21 +13,49 @@ import { reactive } from 'vue'
  * not name follows in the server's order. The menu is read through the same public routes the
  * curated sidebar uses, so it holds only what this reader may see.
  *
- * Which folders are open is remembered per site and locale in `localStorage`. That is a convenience
- * for this browser only: storage may be unavailable (a private window, blocked site data), and the
- * tree then simply starts closed.
+ * A folder is open for one of two reasons: the reader opened it, or the tree opened it to show the
+ * page being read. Only the first is remembered, per site and locale in `localStorage`, so browsing
+ * does not pile up open folders for good. That is a convenience for this browser only: storage may be
+ * unavailable (a private window, blocked site data), and the tree then simply starts closed.
  */
 
 const STORAGE_PREFIX = 'kalon.tree.open'
 
 /**
- * Where a level is. Its items are kept while it reloads, so a level being fetched again shows what it
- * held instead of a loading note.
+ * Where a level is. A level with no entry has not been asked for yet.
+ *
+ * - `loading`: fetched for the first time; nothing to show yet.
+ * - `ready`: fetched, and current.
+ * - `stale`: fetched before content changed somewhere; its items still show, and it is fetched again
+ *   once it is on screen.
+ * - `refreshing`: a stale level on its way again, still showing what it held.
+ * - `failed`: the last fetch failed; offered again with "Try again".
  */
 export const LEVEL_STATUS = Object.freeze({
   LOADING: 'loading',
   READY: 'ready',
+  STALE: 'stale',
+  REFRESHING: 'refreshing',
   FAILED: 'failed'
+})
+
+/** The statuses whose items are shown. */
+const SHOWS_ITEMS = new Set([LEVEL_STATUS.READY, LEVEL_STATUS.STALE, LEVEL_STATUS.REFRESHING])
+
+/** Why a folder is open: only what the reader chose is remembered. */
+export const OPEN_REASON = Object.freeze({
+  CHOSEN: 'chosen',
+  REVEALED: 'revealed'
+})
+
+/** How a request for a level ended, for the caller to decide what, if anything, to tell the reader. */
+export const LOAD_RESULT = Object.freeze({
+  LOADED: 'loaded',
+  /** The folder is not there (deleted, moved, or a path nobody has written yet); dropped quietly. */
+  MISSING: 'missing',
+  FAILED: 'failed',
+  /** The levels were dropped while it was on its way, so what it read was thrown away. */
+  SUPERSEDED: 'superseded'
 })
 
 const state = reactive({
@@ -43,12 +71,19 @@ const state = reactive({
   levels: {},
   /** The page paths each menu names, in its order, by menu id. */
   menus: {},
-  /** Open folders, by path. */
+  /** Open folders: path to `OPEN_REASON`. */
   open: {}
 })
 
+/** Level requests on their way, by path, so a second ask for a level waits on the first. */
+const levelRequests = new Map()
 /** Menu requests on their way, by menu id, so levels sharing a menu ask for it once. */
 const menuRequests = new Map()
+/**
+ * The menus read since content last changed. `state.menus` keeps older ones so a stale level keeps its
+ * order while it reloads; a menu not in here is read again.
+ */
+const freshMenus = new Set()
 
 /**
  * Bumped whenever the levels are dropped, so a response to a request made before that is discarded
@@ -63,7 +98,9 @@ function storageKey(scope) {
 function readOpen(scope) {
   try {
     const paths = JSON.parse(window.localStorage.getItem(storageKey(scope)) ?? '[]')
-    return Array.isArray(paths) ? Object.fromEntries(paths.map((p) => [String(p), true])) : {}
+    return Array.isArray(paths)
+      ? Object.fromEntries(paths.map((p) => [String(p), OPEN_REASON.CHOSEN]))
+      : {}
   } catch {
     return {}
   }
@@ -71,7 +108,8 @@ function readOpen(scope) {
 
 function writeOpen() {
   try {
-    window.localStorage.setItem(storageKey(state.scope), JSON.stringify(Object.keys(state.open)))
+    const chosen = Object.keys(state.open).filter((p) => state.open[p] === OPEN_REASON.CHOSEN)
+    window.localStorage.setItem(storageKey(state.scope), JSON.stringify(chosen))
   } catch {
     // -> Storage unavailable: the open folders last for this visit only
   }
@@ -134,6 +172,49 @@ export function ancestorsOf(path) {
   return parts.slice(0, -1).map((_, i) => parts.slice(0, i + 1).join('/'))
 }
 
+/** Discards every request on its way, so what they read is not written back. */
+function abandonRequests() {
+  generation++
+  levelRequests.clear()
+  menuRequests.clear()
+  freshMenus.clear()
+}
+
+/** Forgets every level and menu, for another site or locale. */
+function startOver() {
+  abandonRequests()
+  state.levels = {}
+  state.menus = {}
+}
+
+/**
+ * Marks every level stale after content changed, keeping what each one shows until it is fetched
+ * again. A level that was on its way or had failed is forgotten instead, so it is asked for afresh.
+ */
+function markStale() {
+  abandonRequests()
+  for (const [path, level] of Object.entries(state.levels)) {
+    if (SHOWS_ITEMS.has(level.status)) {
+      level.status = LEVEL_STATUS.STALE
+    } else {
+      delete state.levels[path]
+    }
+  }
+}
+
+/** Closes a folder and every folder under it. */
+function forgetOpen(path) {
+  for (const p of Object.keys(state.open)) {
+    if (p === path || p.startsWith(`${path}/`)) {
+      delete state.open[p]
+    }
+  }
+}
+
+function isNotFound(err) {
+  return err?.response?.status === 404
+}
+
 export function usePageTree() {
   /** Points the tree at a site and locale, starting over when either changes. */
   function setScope(siteId, locale, localePrefix) {
@@ -141,12 +222,9 @@ export function usePageTree() {
     if (scope === state.scope) {
       return false
     }
-    generation++
-    menuRequests.clear()
+    startOver()
     state.scope = scope
     state.localePrefix = localePrefix
-    state.levels = {}
-    state.menus = {}
     state.open = readOpen(scope)
     return true
   }
@@ -157,27 +235,33 @@ export function usePageTree() {
    * still a usable tree, so a failure here is not worth a notice.
    */
   async function loadMenuAt(siteId, locale, path) {
+    const gen = generation
     try {
       const at = await API_CLIENT.get(`sites/${siteId}/navigation/path`, {
         searchParams: { path, locale }
       }).json()
       const navId = at?.navigationId ?? null
-      if (!navId || state.menus[navId]) {
+      if (!navId || gen !== generation || freshMenus.has(navId)) {
         return navId
       }
-      if (!menuRequests.has(navId)) {
-        // -> Forgotten once settled: what it read is kept in `state.menus`, and a failure is retried
-        menuRequests.set(
-          navId,
-          API_CLIENT.get(`sites/${siteId}/navigation/${navId}`)
-            .json()
-            .finally(() => menuRequests.delete(navId))
-        )
+      let request = menuRequests.get(navId)
+      if (!request) {
+        // -> Forgotten once settled: what it read is kept in `state.menus`, and a failure is retried.
+        //    Only this request's own entry, which a start over may already have replaced.
+        request = API_CLIENT.get(`sites/${siteId}/navigation/${navId}`).json()
+        menuRequests.set(navId, request)
+        request
+          .finally(() => {
+            if (menuRequests.get(navId) === request) {
+              menuRequests.delete(navId)
+            }
+          })
+          .catch(() => {})
       }
-      const gen = generation
-      const items = await menuRequests.get(navId)
+      const items = await request
       if (gen === generation) {
         state.menus[navId] = menuPathsOf(items, state.localePrefix)
+        freshMenus.add(navId)
       }
       return navId
     } catch {
@@ -186,21 +270,32 @@ export function usePageTree() {
   }
 
   /**
-   * Fetches one level unless it is already held or on its way. Resolves to false when the request
-   * failed, so the caller can tell the reader.
+   * Fetches one level unless it is current, and waits on it if it is already on its way. Resolves to a
+   * `LOAD_RESULT`.
    */
-  async function load(siteId, locale, path) {
-    const held = state.levels[path]
-    if (held && held.status !== LEVEL_STATUS.FAILED) {
-      return true
+  function load(siteId, locale, path) {
+    if (state.levels[path]?.status === LEVEL_STATUS.READY) {
+      return Promise.resolve(LOAD_RESULT.LOADED)
     }
+    if (!levelRequests.has(path)) {
+      const request = fetchLevel(siteId, locale, path)
+      levelRequests.set(path, request)
+      request.finally(() => {
+        if (levelRequests.get(path) === request) {
+          levelRequests.delete(path)
+        }
+      })
+    }
+    return levelRequests.get(path)
+  }
+
+  async function fetchLevel(siteId, locale, path) {
     const gen = generation
-    state.levels[path] = {
-      status: LEVEL_STATUS.LOADING,
-      items: held?.items ?? [],
-      truncated: false,
-      navId: held?.navId ?? null
-    }
+    const held = state.levels[path]
+    state.levels[path] =
+      held?.status === LEVEL_STATUS.STALE
+        ? { ...held, status: LEVEL_STATUS.REFRESHING }
+        : { status: LEVEL_STATUS.LOADING, items: [], truncated: false, navId: null }
     // -> Both before the level is shown, so it never appears in one order and then jumps to another
     const menu = loadMenuAt(siteId, locale, path)
     try {
@@ -208,26 +303,57 @@ export function usePageTree() {
         searchParams: { path, locale }
       }).json()
       const navId = await menu
-      if (gen === generation) {
+      if (gen !== generation) {
+        return LOAD_RESULT.SUPERSEDED
+      }
+      state.levels[path] = {
+        status: LEVEL_STATUS.READY,
+        items: data.items ?? [],
+        truncated: Boolean(data.truncated),
+        navId
+      }
+      return LOAD_RESULT.LOADED
+    } catch (err) {
+      if (gen !== generation) {
+        return LOAD_RESULT.SUPERSEDED
+      }
+      // -> A folder that is not there (deleted, moved) is closed with everything under it, and held as
+      //    empty so nothing asks for it again until content changes
+      if (isNotFound(err)) {
         state.levels[path] = {
           status: LEVEL_STATUS.READY,
-          items: data.items ?? [],
-          truncated: Boolean(data.truncated),
-          navId
-        }
-      }
-      return true
-    } catch {
-      if (gen === generation) {
-        state.levels[path] = {
-          status: LEVEL_STATUS.FAILED,
           items: [],
           truncated: false,
           navId: null
         }
+        forgetOpen(path)
+        writeOpen()
+        return LOAD_RESULT.MISSING
       }
-      return false
+      state.levels[path] = {
+        status: LEVEL_STATUS.FAILED,
+        items: [],
+        truncated: false,
+        navId: null
+      }
+      return LOAD_RESULT.FAILED
     }
+  }
+
+  /** The request for a level on its way, or null, for a caller waiting until it has arrived. */
+  function pendingLevel(path) {
+    return levelRequests.get(path) ?? null
+  }
+
+  /** Whether a level has items to show, current or not. */
+  function showsItems(level) {
+    return SHOWS_ITEMS.has(level?.status)
+  }
+
+  /** Whether a level is to be fetched: never asked for, or stale. */
+  function needsLoad(path) {
+    const status = state.levels[path]?.status
+    return !status || status === LEVEL_STATUS.STALE
   }
 
   /** A level's items in the order they are shown. */
@@ -236,31 +362,39 @@ export function usePageTree() {
   }
 
   /**
-   * Takes in a menu the curated sidebar has just read, if the tree orders a level by it: an edit in
-   * Edit Nav reorders the tree as it reorders the sidebar, with no request of its own.
+   * Takes in a menu the curated sidebar has just read. A level ordered by it then needs no request of
+   * its own, and an edit in Edit Nav reorders the tree as it reorders the sidebar.
    */
   function takeMenu(navId, items) {
-    if (navId && state.menus[navId]) {
+    if (navId) {
       state.menus[navId] = menuPathsOf(items, state.localePrefix)
+      freshMenus.add(navId)
     }
   }
 
-  function setOpen(path, isOpen) {
-    if (isOpen) {
-      state.open[path] = true
-    } else {
+  /**
+   * Opens or closes a folder. The tree revealing a folder never downgrades one the reader chose; the
+   * reader closing a folder closes it whatever opened it.
+   */
+  function setOpen(path, isOpen, reason = OPEN_REASON.CHOSEN) {
+    if (!isOpen) {
       delete state.open[path]
+    } else if (reason === OPEN_REASON.CHOSEN || !state.open[path]) {
+      state.open[path] = reason
     }
     writeOpen()
   }
 
-  /** Drops every level and menu, for a reload after content changed. Open folders stay open. */
-  function drop() {
-    generation++
-    menuRequests.clear()
-    state.levels = {}
-    state.menus = {}
+  return {
+    state,
+    setScope,
+    load,
+    pendingLevel,
+    showsItems,
+    needsLoad,
+    itemsOf,
+    takeMenu,
+    setOpen,
+    markStale
   }
-
-  return { state, setScope, load, itemsOf, takeMenu, setOpen, drop }
 }
