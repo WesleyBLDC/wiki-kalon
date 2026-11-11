@@ -68,6 +68,9 @@ How Kalon's own styling is wired (from `kalon: theme`):
 - Upstream component styles load in lazy chunks after Kalon's sheets, so a tie on specificity goes to upstream. Every rule in `_overrides.scss` is prefixed with `:root` to outrank the rule it overrides by one class; where upstream keys off `body--light` or `body--dark`, the override names `body` too, which also beats a scoped rule's data attribute.
 - Content colours are overridden on both `.page-contents` and `.body--dark .page-contents`, because upstream's dark block uses the second.
 - The admin area keeps its own colours; only the font changes there.
+- To hide an upstream control without editing its file, key on what the markup already says: `WIcon` writes `data-icon="<name>"`, so `:has([data-icon='la:tags'])` finds a section by its icon. `:has()` cannot hold another `:has()`, so "contains X but not Y" is written on the element itself, `:has(X):not(:has(Y))`.
+- Upstream sets some sizes inline (`WIcon`'s `size`, `WBtn`'s, custom properties in a `:style`), and only `!important` overrides those.
+- Dark content tokens go under `@media not print`, as upstream's do, so a page printed from the dark theme prints the light palette.
 
 Community themes: as of November 2026 none targets Wiki.js 3; they are CSS for 2.x (Vuetify) and must be ported, not pasted.
 Check one with:
