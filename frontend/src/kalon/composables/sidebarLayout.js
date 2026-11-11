@@ -31,7 +31,11 @@ function read() {
   }
 }
 
-const layout = reactive(read())
+/**
+ * `peeking` is the collapsed sidebar floated over the page for a moment, from a hover on the left edge
+ * or the expand glyph; it is never saved, and collapsing or expanding ends it.
+ */
+const layout = reactive({ ...read(), peeking: false })
 
 function save() {
   try {
@@ -51,7 +55,60 @@ export function setSidebarWidth(width) {
 
 export function setSidebarCollapsed(collapsed) {
   layout.collapsed = Boolean(collapsed)
+  endSidebarPeek()
   save()
+}
+
+/** How long a hover has to rest before the sidebar peeks, and how long it lingers once left (ms). */
+const PEEK_OPEN_DELAY = 120
+const PEEK_CLOSE_DELAY = 300
+
+/** The one pending peek change, so a later hover or leave replaces an earlier one. */
+let peekTimer = 0
+
+function schedulePeek(peeking, delay) {
+  window.clearTimeout(peekTimer)
+  peekTimer = window.setTimeout(() => {
+    layout.peeking = peeking && layout.collapsed
+  }, delay)
+}
+
+/** The pointer reached the edge or the glyph of a collapsed sidebar: float it in after a beat. */
+export function requestSidebarPeek() {
+  if (layout.collapsed && !layout.peeking) {
+    schedulePeek(true, PEEK_OPEN_DELAY)
+  } else {
+    window.clearTimeout(peekTimer)
+  }
+}
+
+/**
+ * The pointer left the floating sidebar or what calls it up. It stays while something inside it holds
+ * the reader: the focus (typing a search) or one of its menus, which open outside the panel. Those
+ * end it with a click elsewhere or Escape instead (`useSidebarLayout`).
+ */
+export function releaseSidebarPeek() {
+  if (!layout.peeking) {
+    window.clearTimeout(peekTimer)
+    return
+  }
+  if (isPeekHeld()) {
+    return
+  }
+  schedulePeek(false, PEEK_CLOSE_DELAY)
+}
+
+export function endSidebarPeek() {
+  window.clearTimeout(peekTimer)
+  layout.peeking = false
+}
+
+function peekPanel() {
+  return document.querySelector('.kalon-sidebar-peek')
+}
+
+function isPeekHeld() {
+  return Boolean(peekPanel()?.contains(document.activeElement) || document.querySelector('.w-menu'))
 }
 
 export function toggleSidebarCollapsed() {
@@ -68,13 +125,15 @@ export function toggleSidebarCollapsed() {
  * - `rail`: a wide screen on a page whose navigation is hidden, which upstream draws as the icon rail.
  * - `open`: a wide screen with the full sidebar, the site header folded into it.
  * - `collapsed`: a wide screen with the full sidebar put away by the reader.
+ * - `peek`: collapsed, and floated over the page for a moment without moving it.
  */
 export const SIDEBAR_MODE = Object.freeze({
   NONE: 'none',
   OVERLAY: 'overlay',
   RAIL: 'rail',
   OPEN: 'open',
-  COLLAPSED: 'collapsed'
+  COLLAPSED: 'collapsed',
+  PEEK: 'peek'
 })
 
 /** Which shape the sidebar is in, from what the layout knows and the reader's collapsed choice. */
@@ -88,7 +147,10 @@ export function sidebarModeFor({ isAvailable, isWide, isRail }) {
   if (isRail) {
     return SIDEBAR_MODE.RAIL
   }
-  return layout.collapsed ? SIDEBAR_MODE.COLLAPSED : SIDEBAR_MODE.OPEN
+  if (!layout.collapsed) {
+    return SIDEBAR_MODE.OPEN
+  }
+  return layout.peeking ? SIDEBAR_MODE.PEEK : SIDEBAR_MODE.COLLAPSED
 }
 
 /** The layout state alone, for components that read or change it without owning the shortcut. */
@@ -146,7 +208,27 @@ export function useSidebarLayout({
       toggleSidebarCollapsed()
     }
   }
-  onMounted(() => window.addEventListener('keydown', onKeydown))
-  onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
+  // -> A peek held open by its focus or a menu ends with Escape or a press outside the panel and its menus
+  function onPeekKeydown(ev) {
+    if (ev.key === 'Escape' && layout.peeking && !document.querySelector('.w-menu')) {
+      endSidebarPeek()
+    }
+  }
+  function onPointerdown(ev) {
+    if (layout.peeking && !ev.target?.closest?.('.kalon-sidebar-peek, .w-menu')) {
+      endSidebarPeek()
+    }
+  }
+  onMounted(() => {
+    window.addEventListener('keydown', onKeydown)
+    window.addEventListener('keydown', onPeekKeydown)
+    window.addEventListener('pointerdown', onPointerdown, true)
+  })
+  onBeforeUnmount(() => {
+    window.removeEventListener('keydown', onKeydown)
+    window.removeEventListener('keydown', onPeekKeydown)
+    window.removeEventListener('pointerdown', onPointerdown, true)
+    endSidebarPeek()
+  })
   return layout
 }

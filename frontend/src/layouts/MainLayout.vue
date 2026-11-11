@@ -9,8 +9,12 @@
       theme's `sidebarPosition` and is placed in physical terms, so it does not move with them -- what
       runs the other way on a right-to-left interface is what is inside it.
     -->
+    <!-- kalon: a collapsed sidebar floats over the page when it peeks (and as it slides away), and stays while the pointer is on it -->
     <w-drawer
       class="bg-sidebar"
+      :class="{ 'kalon-sidebar-peek': kalonShowsExpandBtn }"
+      @mouseenter="requestSidebarPeek"
+      @mouseleave="releaseSidebarPeek"
       :lang="commonStore.locale"
       :dir="siteStore.localeDir(commonStore.locale)"
       v-model="isSidebarOpen"
@@ -102,7 +106,9 @@
           </w-btn>
         </w-bar>
         <sidebar-footer v-if="kalonHeaderInSidebar" />
-        <sidebar-resize-handle v-if="kalonHeaderInSidebar" :side="siteStore.theme.sidebarPosition" />
+        <sidebar-resize-handle
+          v-if="kalonSidebarMode === SIDEBAR_MODE.OPEN"
+          :side="siteStore.theme.sidebarPosition" />
       </template>
     </w-drawer>
     <!--
@@ -123,11 +129,10 @@
       `.corner-btn`. No margin, so the button is not a disc hovering near the edge of a small screen but
       a piece of the screen's own corner, and every pixel of it is inside the viewport.
     -->
-    <!-- kalon: a wide screen's collapsed sidebar comes back from the same glyph, in the top corner -->
-    <sidebar-toggle-button
+    <!-- kalon: a wide screen's collapsed sidebar comes back from the same glyph, in the top corner, and peeks from the edge -->
+    <sidebar-collapsed-edge
       v-if="kalonShowsExpandBtn"
-      class="kalon-sidebar-expand"
-      :class="{ 'is-right': siteStore.theme.sidebarPosition === `right` }" />
+      :is-right="siteStore.theme.sidebarPosition === `right`" />
     <transition name="corner-btn">
       <div v-if="showSidebarBtn" class="fixed bottom-0 left-0 z-30">
         <w-btn
@@ -206,11 +211,13 @@ import NavBrowseMenu from '@/components/NavBrowseMenu.vue'
 // kalon: the header's contents in the sidebar on a wide screen
 import SidebarFooter from '@/kalon/components/SidebarFooter.vue'
 import SidebarHeader from '@/kalon/components/SidebarHeader.vue'
-// kalon: the sidebar's width and collapsed state on a wide screen
+// kalon: the sidebar's width, collapsed state and peek on a wide screen
+import SidebarCollapsedEdge from '@/kalon/components/SidebarCollapsedEdge.vue'
 import SidebarResizeHandle from '@/kalon/components/SidebarResizeHandle.vue'
-import SidebarToggleButton from '@/kalon/components/SidebarToggleButton.vue'
 import {
   SIDEBAR_MODE,
+  releaseSidebarPeek,
+  requestSidebarPeek,
   setSidebarCollapsed,
   sidebarModeFor,
   useSidebarLayout
@@ -334,7 +341,7 @@ const isSidebarOpen = computed({
   get: () =>
     kalonSidebarMode.value === SIDEBAR_MODE.OVERLAY
       ? isNarrowSidebarOpen.value
-      : [SIDEBAR_MODE.RAIL, SIDEBAR_MODE.OPEN].includes(kalonSidebarMode.value),
+      : [SIDEBAR_MODE.RAIL, SIDEBAR_MODE.OPEN, SIDEBAR_MODE.PEEK].includes(kalonSidebarMode.value),
   // -> Only ever reached from the scrim, which exists only while overlaying
   set: (val) => {
     isNarrowSidebarOpen.value = val
@@ -371,18 +378,26 @@ const kalonSidebarMode = computed(() =>
   })
 )
 const kalonIsFullWide = computed(() =>
-  [SIDEBAR_MODE.OPEN, SIDEBAR_MODE.COLLAPSED].includes(kalonSidebarMode.value)
+  [SIDEBAR_MODE.OPEN, SIDEBAR_MODE.COLLAPSED, SIDEBAR_MODE.PEEK].includes(kalonSidebarMode.value)
 )
 // -> No site header beside a wide screen's full sidebar, open or collapsed (Ctrl+K opens it on search)
 const kalonHidesSiteHeader = computed(() => kalonIsFullWide.value)
-// -> The header's contents live in the sidebar while it is open
-const kalonHeaderInSidebar = computed(() => kalonSidebarMode.value === SIDEBAR_MODE.OPEN)
-// -> The glyph in the top corner brings a collapsed sidebar back
-const kalonShowsExpandBtn = computed(() => kalonSidebarMode.value === SIDEBAR_MODE.COLLAPSED)
+// -> The header's contents live in the sidebar while it is open or peeking
+const kalonHeaderInSidebar = computed(() =>
+  [SIDEBAR_MODE.OPEN, SIDEBAR_MODE.PEEK].includes(kalonSidebarMode.value)
+)
+// -> The glyph in the top corner brings a collapsed sidebar back; kept under the peeking panel
+const kalonShowsExpandBtn = computed(() =>
+  [SIDEBAR_MODE.COLLAPSED, SIDEBAR_MODE.PEEK].includes(kalonSidebarMode.value)
+)
 
 // kalon: a wide screen's full sidebar takes the width the reader dragged it to
 const sidebarWidth = computed(() =>
-  isSidebarMini.value ? SIDEBAR_WIDTH_MINI : kalonIsFullWide.value ? kalonLayout.width : SIDEBAR_WIDTH
+  isSidebarMini.value
+    ? SIDEBAR_WIDTH_MINI
+    : kalonIsFullWide.value
+      ? kalonLayout.width
+      : SIDEBAR_WIDTH
 )
 
 /*
@@ -397,8 +412,13 @@ const sidebarWidth = computed(() =>
 const scrollerAnchorX = computed(() => {
   // -> No separate test for `sidebarPosition === 'off'`: that IS `sideNavIsDisabled`, which
   //    `isSidebarAvailable` already asks
-  // kalon: nor while a wide screen's sidebar is collapsed
-  if (!isWideViewport.value || !isSidebarAvailable.value || !isSidebarOpen.value) {
+  // kalon: nor while a wide screen's sidebar is collapsed, or only peeking over the page
+  if (
+    !isWideViewport.value ||
+    !isSidebarAvailable.value ||
+    !isSidebarOpen.value ||
+    kalonSidebarMode.value === SIDEBAR_MODE.PEEK
+  ) {
     return null
   }
   return siteStore.theme.sidebarPosition === 'right' ? '100%' : `${sidebarWidth.value}px`

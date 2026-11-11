@@ -56,18 +56,13 @@ const label = computed(() =>
 }
 
 /*
-  While the sidebar is collapsed: pinned in the top corner on the sidebar's side, over the start of the
-  page's top bar, which makes room for it (`_overrides.scss`).
+  While the sidebar is collapsed: pinned in the top corner on the sidebar's side (`SidebarCollapsedEdge`),
+  over the start of the page's top bar, which makes room for it (`_overrides.scss`).
 */
 .kalon-sidebar-expand {
   position: fixed;
   top: 8px;
   left: 8px;
   z-index: 20;
-
-  &.is-right {
-    right: 8px;
-    left: auto;
-  }
 }
 </style>

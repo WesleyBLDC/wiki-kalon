@@ -1034,10 +1034,10 @@
 }
 
 // -> While the sidebar is collapsed, the top bar starts after the glyph that brings it back
-:root body:has(.kalon-sidebar-expand:not(.is-right)) .page-breadcrumbs {
+:root body:has(.kalon-sidebar-edge:not(.is-right)) .page-breadcrumbs {
   padding-left: 52px;
 }
-:root body:has(.kalon-sidebar-expand.is-right) .page-breadcrumbs {
+:root body:has(.kalon-sidebar-edge.is-right) .page-breadcrumbs {
   padding-right: 52px;
 }
 
@@ -1046,6 +1046,6 @@
 /* ---------------------------------------------------------------------------------------------- */
 
 // -> The positioning context for the resize handle on its inner edge, while the drawer is a column
-:root .w-drawer.bg-sidebar:not(.w-drawer--overlay) {
+:root .w-drawer.bg-sidebar:not(.w-drawer--overlay, .kalon-sidebar-peek) {
   position: relative;
 }
