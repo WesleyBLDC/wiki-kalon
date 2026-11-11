@@ -101,6 +101,15 @@
         </div>
       </template>
     </div>
+    <w-btn
+      v-if="canAdd"
+      class="kalon-tree-new"
+      flat
+      no-caps
+      icon="la:plus"
+      :label="t('kalon.tree.newPage')">
+      <page-new-menu base-path="" :locale="locale" hide-asset-btn />
+    </w-btn>
   </section>
 </template>
 
@@ -378,6 +387,33 @@ onBeforeUnmount(() => {
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.01em;
+}
+
+// -> "+ New page" after the last row, as the board draws it; the same menu as the "+" by "Pages"
+.kalon-tree-new {
+  display: flex;
+  justify-content: flex-start;
+  width: calc(100% - 16px);
+  min-height: 30px;
+  margin: 4px 8px 0;
+  padding-inline: 6px;
+  border-radius: var(--kalon-radius-sm);
+  color: var(--kalon-text-2);
+  font-size: 0.875rem;
+  font-weight: 400;
+
+  .w-icon {
+    font-size: 16px;
+  }
+
+  &:hover {
+    background-color: var(--kalon-hover);
+    color: var(--kalon-text);
+  }
+
+  @media (pointer: coarse) {
+    min-height: 44px;
+  }
 }
 
 .kalon-tree-row,
