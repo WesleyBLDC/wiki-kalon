@@ -15,6 +15,22 @@
       :self="`top ${endSide}`"
       auto-close>
       <w-list dense padding>
+        <!-- -> `.stop`: the menu closes on any click inside it, and a switch should show what it did -->
+        <div class="kalon-page-menu-appearance" @click.stop>
+          <div class="kalon-page-menu-label">{{ t('kalon.page.appearance') }}</div>
+          <div class="kalon-segmented" role="group" :aria-label="t('kalon.page.appearance')">
+            <button
+              v-for="option of APPEARANCE_OPTIONS"
+              :key="option.value"
+              type="button"
+              class="kalon-segmented-btn"
+              :aria-pressed="userStore.appearance === option.value"
+              @click="setAppearance(option.value)">
+              {{ t(option.label) }}
+            </button>
+          </div>
+        </div>
+        <w-separator class="my-1" />
         <w-item v-if="showHistory" clickable @click="viewPageHistory">
           <w-item-section side><w-icon name="la:history" size="xs" /></w-item-section>
           <w-item-section>{{ t('kalon.page.history') }}</w-item-section>
@@ -80,11 +96,12 @@ import { usePageStore } from '@/stores/page'
 import { useSiteStore } from '@/stores/site'
 import { useUserStore } from '@/stores/user'
 
+import { APPEARANCE, useAppearance } from '../composables/appearance'
 import { kalonMessages } from '../i18n'
 
 /**
- * The page's ⋯ menu in the top bar, as labelled rows: what the right-hand action rail offers while
- * a page is read, which Kalon hides in reading mode.
+ * The page's ⋯ menu in the top bar: a Site, Light, Dark switch, then as labelled rows what the
+ * right-hand action rail offers while a page is read, which Kalon hides in reading mode.
  *
  * The conditions and handlers are copied from `components/PageActionsCol.vue` (the computeds of the
  * same names, and the handler bodies), so each row appears for exactly whom the rail's button does.
@@ -100,6 +117,14 @@ const userStore = useUserStore()
 
 const router = useRouter()
 const { t } = useI18n({ messages: kalonMessages })
+const { setAppearance } = useAppearance()
+
+/** Site, Light, Dark: the account menu's three choices, set directly from here (see the board). */
+const APPEARANCE_OPTIONS = [
+  { value: APPEARANCE.SITE, label: 'kalon.page.appearanceSite' },
+  { value: APPEARANCE.LIGHT, label: 'profile.appearanceLight' },
+  { value: APPEARANCE.DARK, label: 'profile.appearanceDark' }
+]
 
 // COMPUTED (as PageActionsCol)
 
@@ -126,16 +151,8 @@ const hasMoveGroup = computed(
     (userStore.can('write:pages') && (canConvert.value || hasBody.value))
 )
 
-const hasEntries = computed(
-  () =>
-    isSaved.value &&
-    (showHistory.value ||
-      showSource.value ||
-      siteStore.theme.showPrintBtn ||
-      userStore.can('write:pages') ||
-      hasMoveGroup.value ||
-      userStore.can('delete:pages'))
-)
+// -> The appearance switch is always there, so the menu is offered for every saved page
+const hasEntries = computed(() => isSaved.value)
 
 /** The side the bar ends on, which a menu hanging off its buttons aligns to (as `PageHeader`). */
 const endSide = computed(() =>
@@ -257,8 +274,58 @@ function deletePage() {
     padding-inline-end: 10px;
   }
 
+  .kalon-page-menu-appearance {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px 8px 6px;
+  }
+
+  .kalon-page-menu-label {
+    color: var(--kalon-text-3);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
   .kalon-page-menu-danger {
     color: var(--color-negative);
+  }
+}
+
+// -> A row of choices where the chosen one is raised, for a setting with a handful of values
+.kalon-segmented {
+  display: flex;
+  padding: 2px;
+  border-radius: var(--kalon-radius-sm);
+  background-color: var(--kalon-hover);
+}
+
+.kalon-segmented-btn {
+  flex: 1;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--kalon-radius-xs);
+  background: none;
+  color: var(--kalon-text-2);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--kalon-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--kalon-accent);
+    outline-offset: -2px;
+  }
+
+  &[aria-pressed='true'] {
+    background-color: var(--kalon-pop);
+    box-shadow: 0 0 0 1px var(--kalon-border-strong);
+    color: var(--kalon-text);
+    font-weight: 500;
   }
 }
 </style>

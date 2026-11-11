@@ -72,6 +72,29 @@
     <page-meta
       v-if="!pageStore.notFound && !editorStore.isActive"
       :inset="headerBounds?.inset ?? null" />
+    <!--
+      kalon: Article / Talk / Links under the title, lined up with it, as part of the page's head rather
+      than a strip over the article. Still outside the scrolling box, so an anchor jumped to lands under
+      nothing. Upstream's notes on the strip are where it used to be drawn, in the article column below.
+    -->
+    <div
+      v-if="showTalkTab || showLinksTab"
+      class="kalon-page-tabs"
+      :style="
+        headerBounds !== null
+          ? {
+              '--kalon-tabs-inset': `${headerBounds.inset}px`,
+              '--kalon-tabs-measure': `${headerBounds.width}px`
+            }
+          : null
+      ">
+      <page-view-tabs
+        :model-value="activeView"
+        :talk="showTalkTab"
+        :links="showLinksTab"
+        :idea="isIdea"
+        @update:model-value="switchView" />
+    </div>
     <!-- -> `min-h-0` so the columns inside can be shorter than their content and scroll -->
     <div
       class="page-container flex min-h-0 flex-nowrap items-stretch"
@@ -100,13 +123,7 @@
           land where it should: the scrollport starts under the strip, so a heading jumped to is not
           jumped to underneath it.
         -->
-        <page-view-tabs
-          v-if="showTalkTab || showLinksTab"
-          :model-value="activeView"
-          :talk="showTalkTab"
-          :links="showLinksTab"
-          :idea="isIdea"
-          @update:model-value="switchView" />
+        <!-- kalon: the strip is drawn under the title instead, see `kalon-page-tabs` above -->
         <component :is="editorComponents[editorStore.editor]" v-if="editorStore.isActive" />
         <!--
           The lock screen, in place of the article. There is nothing to hide here: the server sent no

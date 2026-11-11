@@ -40,7 +40,9 @@ export const kalonMessages = {
         rerender: 'Rerender',
         delete: 'Delete page',
         edited: 'Edited {date}',
-        editedBy: 'Last edited by {name}'
+        editedBy: 'Last edited by {name}',
+        appearance: 'Appearance',
+        appearanceSite: 'Site'
       }
     }
   }

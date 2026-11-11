@@ -339,8 +339,20 @@
   li:last-child .w-breadcrumbs__el {
     color: var(--kalon-text);
   }
+
+  // -> Plain words with slashes between them, as the board draws the trail; Home keeps its icon
+  li:not(:first-child) .w-breadcrumbs__el-icon {
+    display: none;
+  }
   .w-breadcrumbs__separator {
     color: var(--kalon-text-3);
+
+    .w-icon {
+      display: none;
+    }
+    &::before {
+      content: '/';
+    }
   }
 
   // -> Upstream's "Last modified on <date>"; the top bar says "Edited <date>" instead
@@ -358,53 +370,112 @@
 }
 
 /*
-  The title block: flat and sized by its contents instead of a 95px band, the icon at 40px on the title
-  line, with room above the title like a document's top margin.
+  The title block as the board draws it: the icon in a tinted tile beside the title, then the
+  description on a line of its own starting where the icon does, as the tags line and the tabs under it
+  do. Upstream's text column is unpacked (`display: contents`) so its title and description become
+  items of the header's own wrapping row; the markup is unchanged. `--page-header-inset` is set where
+  the header is lined up with a centred article (`pages/Index.vue`), and is the header's start.
 */
 :root .page-header {
+  --kalon-header-start: var(--page-header-inset, 16px);
   height: auto;
   min-height: 0;
   flex-shrink: 0;
-  padding-top: 32px;
+  align-items: center;
+  row-gap: 6px;
+  padding-block: 40px 12px;
+  padding-inline-end: 16px;
 
   @media (max-width: $breakpoint-xs-max) {
-    padding-top: 16px;
-  }
-
-  // -> Upstream sets the sizes inline, so only `!important` reaches them; a page with no icon draws none
-  &:has(.page-header-icon > .w-icon, .page-header-icon > .w-btn) {
-    --page-header-icon-size: var(--kalon-title-icon) !important;
+    padding-top: 20px;
   }
 
   .page-header-icon {
-    align-items: flex-start;
-    padding-top: 16px;
+    order: 0;
+    align-self: center;
+    padding-block: 0;
+    padding-inline: var(--kalon-header-start) 12px;
+  }
+
+  // -> Upstream sets the icon's size inline (64px), which only `!important` outranks
+  .page-header-icon > .w-icon,
+  .page-header-icon > .w-btn .w-icon {
+    box-sizing: content-box;
+    padding: 9px;
+    border-radius: var(--kalon-radius);
+    background-color: color-mix(in srgb, currentColor 14%, transparent);
+    font-size: 22px !important;
 
     @media (max-width: $breakpoint-xs-max) {
-      padding-top: 8px;
+      padding: 7px;
+      font-size: 18px !important;
     }
-
-    > .w-icon,
-    > .w-btn,
-    > .w-btn .w-icon {
-      font-size: var(--kalon-title-icon) !important;
-      min-height: var(--kalon-title-icon) !important;
-      border-radius: var(--kalon-radius-sm);
-    }
+  }
+  .page-header-icon > .w-btn {
+    min-height: 0 !important;
+    padding: 0;
+    border-radius: var(--kalon-radius);
   }
 
   .page-header-text {
-    justify-content: flex-start;
-    padding-bottom: 8px;
+    display: contents;
   }
-
-  // -> The editor's Save and Close row, level with the title rather than centred in a tall band
+  .page-header-title {
+    order: 1;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  // -> The editor's Save and Close, on the title's line
   .page-header-actions {
-    align-items: flex-start;
+    order: 2;
+    align-self: center;
+    padding: 0;
   }
+  .page-header-subtitle {
+    order: 3;
+    flex: 0 0 100%;
+    padding-inline-start: var(--kalon-header-start);
+  }
+}
+// -> A page with no icon draws none, so nothing is left beside the title
+:root .page-header:not(:has(.page-header-icon > *)) .page-header-icon {
+  padding-inline-end: 0;
 }
 :root .page-header.is-aligned {
   min-height: 0;
+
+  // -> Held to the article's width by padding, not `max-width`: a capped line would fit beside the
+  //    title and never wrap under it (percent padding is of the header's width)
+  .page-header-subtitle {
+    padding-inline-end: max(
+      0px,
+      calc(100% - var(--page-header-inset) - var(--page-header-measure) - 16px)
+    );
+  }
+}
+
+/*
+  The reading column: a centred page (Admin > Theme > Content Width) keeps its text to 760px, the
+  board's 720 to 900, and the header, the tags line and the tabs line up with it.
+*/
+:root .page-container-body.is-centered .page-measure {
+  max-width: 760px;
+}
+
+// -> No rule between the article and the contents column; the contents read as a quiet margin
+:root .page-container .page-article-col {
+  border-right: 0;
+  border-left: 0;
+}
+:root .page-sidebar > .p-4:has([data-icon='la:stream']) {
+  [data-icon='la:stream'] {
+    display: none;
+  }
+  .text-caption {
+    color: var(--kalon-text-3);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
 }
 
 /*
@@ -432,26 +503,43 @@
 }
 
 /*
-  Article, Talk and Links as small text tabs with a 2px underline on the open one, instead of folder
-  tabs raised out of a grey strip.
+  Article, Talk and Links as small text tabs under the title (`.kalon-page-tabs`, placed by
+  `pages/Index.vue`): left aligned with the header, a hairline across the reading column, and a 2px
+  underline on the open one, instead of folder tabs raised out of a grey strip over the article.
 */
+:root .kalon-page-tabs {
+  --page-chrome-rule: var(--kalon-border);
+  flex: none;
+  padding-inline: var(--kalon-tabs-inset, 16px) 16px;
+}
+
 :root body.body--light,
 :root body.body--dark {
-  .page-view-tabs {
+  .kalon-page-tabs .page-view-tabs {
+    justify-content: flex-start;
     align-items: stretch;
-    gap: 4px;
-    padding-inline: 12px;
+    gap: 18px;
+    max-width: var(--kalon-tabs-measure, none);
+    height: 36px;
+    margin: 0;
+    padding: 0;
+    background: none;
   }
 
   .page-view-tab {
     height: auto;
-    padding: 0 8px;
+    padding: 0;
     border: 0;
     border-radius: 0;
     background: none;
     box-shadow: none;
     clip-path: none;
     color: var(--kalon-text-2);
+    font-size: 0.8125rem;
+
+    .w-icon {
+      display: none;
+    }
 
     &:hover:not(.is-active) {
       background: none;

@@ -2,7 +2,6 @@
   <div
     v-if="showTags || showLastEditedBy"
     class="kalon-page-meta"
-    :class="{ 'has-icon': Boolean(pageStore.icon) }"
     :style="inset !== null ? { '--kalon-meta-inset': `${inset}px` } : null">
     <router-link
       v-for="tag of showTags ? pageStore.tags : []"
@@ -18,6 +17,9 @@
           <router-link :to="`/_user/${pageStore.authorId}`">{{ pageStore.authorName }}</router-link>
         </template>
       </i18n-t>
+      <template v-if="pageStore.updatedAt">
+        · {{ userStore.formatDateTime(t, pageStore.updatedAt) }}
+      </template>
       <w-badge
         v-if="pageStore.editedVia === `mcp` && siteStore.showAiBadge"
         class="ms-2"
@@ -37,13 +39,14 @@ import { useI18n } from 'vue-i18n'
 import { tagBrowserRoute } from '@/helpers/tagBrowser'
 import { usePageStore } from '@/stores/page'
 import { useSiteStore } from '@/stores/site'
+import { useUserStore } from '@/stores/user'
 
 import { kalonMessages } from '../i18n'
 
 /**
- * The page's tags and who last edited it, under the title instead of in the contents column, lined up
- * with the title's first letter. Reads the page store only; no request of its own. When it was edited
- * is in the top bar (`PageActions.vue`). The same conditions as the contents column's sections
+ * The page's tags and who last edited it and when, under the title instead of in the contents column,
+ * lined up with the page icon and the description above it. Reads the page store only; no request of
+ * its own. The same conditions as the contents column's sections
  * in `pages/Index.vue` (`showTags`, `showLastEditedBy`), which Kalon hides there. Tags are edited from
  * Properties, as before.
  */
@@ -58,6 +61,7 @@ defineProps({
 
 const pageStore = usePageStore()
 const siteStore = useSiteStore()
+const userStore = useUserStore()
 
 const { t } = useI18n({ messages: kalonMessages, useScope: 'local' })
 
@@ -75,23 +79,11 @@ const showLastEditedBy = computed(
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 8px;
-  /*
-    Where the title starts: the header's inset, the icon beside the title when there is one, and the
-    title column's own padding (16px, 8px on a phone; see `PageHeader.vue`).
-  */
-  --kalon-meta-icon: 0px;
-  padding-block: 0 16px;
-  padding-inline: calc(var(--kalon-meta-inset, 16px) + var(--kalon-meta-icon) + 16px) 16px;
+  // -> Where the header starts, as the page icon and the description do (`_overrides.scss`)
+  padding-block: 0 12px;
+  padding-inline: var(--kalon-meta-inset, 16px) 16px;
   color: var(--kalon-text-2);
   font-size: 0.8125rem;
-
-  &.has-icon {
-    --kalon-meta-icon: var(--kalon-title-icon);
-  }
-
-  @media (max-width: $breakpoint-xs-max) {
-    padding-inline: calc(var(--kalon-meta-inset, 16px) + var(--kalon-meta-icon) + 8px) 8px;
-  }
 }
 
 .kalon-page-tag {
