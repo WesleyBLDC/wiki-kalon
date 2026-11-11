@@ -125,11 +125,15 @@ import { useUserStore } from '@/stores/user'
 
 import PageNewMenu from '@/components/PageNewMenu.vue'
 
-import { ancestorsOf, usePageTree } from '../composables/pageTree'
+import { LEVEL_STATUS, ancestorsOf, usePageTree } from '../composables/pageTree'
 import { useKalonI18n } from '../i18n'
 
 /**
  * The site's pages as a tree under the curated menu, loaded a folder at a time from `tree/browse`.
+ *
+ * Each folder lists its pages in the order of the navigation menu shown there, so dragging items in
+ * Edit Nav is how the tree is arranged (`composables/pageTree.js`); pages the menu leaves out follow
+ * A to Z.
  *
  * Opens to the page being read, remembers which folders were opened, and offers "+" to start a page
  * inside a folder. The server filters every level by what the reader may read, so this never shows a
@@ -147,7 +151,7 @@ const router = useRouter()
 
 const { t } = useKalonI18n()
 
-const { state, setScope, load, setOpen, drop } = usePageTree()
+const { state, setScope, load, itemsOf, takeMenu, setOpen, drop } = usePageTree()
 
 const treeEl = ref(null)
 const focusKey = ref('')
@@ -178,29 +182,30 @@ const itemRows = computed(() => rows.value.filter((r) => r.kind === 'item'))
 
 function walk(path, depth, out) {
   const level = state.levels[path]
-  if (!level || (level.loading && level.items.length < 1)) {
+  if (!level || (level.status === LEVEL_STATUS.LOADING && level.items.length < 1)) {
     out.push({ kind: 'note', key: `${path}:loading`, depth, label: t('common.loading') })
     return
   }
-  if (level.failed) {
+  if (level.status === LEVEL_STATUS.FAILED) {
     out.push({ kind: 'note', key: `${path}:failed`, depth, label: t('common.browse.loadFailed') })
     return
   }
-  level.items.forEach((item, i) => {
+  const items = itemsOf(level)
+  items.forEach((item, i) => {
     out.push({
       kind: 'item',
       key: item.path,
       item,
       depth,
       position: i + 1,
-      setSize: level.items.length,
+      setSize: items.length,
       isCurrent: item.isPage && item.path === pageStore.path
     })
     if (item.isFolder && state.open[item.path]) {
       walk(item.path, depth + 1, out)
     }
   })
-  if (level.items.length < 1) {
+  if (items.length < 1) {
     out.push({ kind: 'note', key: `${path}:empty`, depth, label: t('common.browse.empty') })
   }
   if (level.truncated) {
@@ -330,7 +335,7 @@ watch(
     if (!isShown.value) {
       return
     }
-    setScope(siteStore.id, locale.value)
+    setScope(siteStore.id, locale.value, siteStore.localeUrlPrefix(locale.value))
     loadVisible()
     revealCurrent()
   },
@@ -344,6 +349,12 @@ watch(
       revealCurrent()
     }
   }
+)
+
+// -> The curated sidebar reads its menu again after Edit Nav saves and on each page load
+watch(
+  () => [siteStore.nav.currentId, siteStore.nav.items],
+  ([navId, items]) => takeMenu(navId, items)
 )
 
 /*
