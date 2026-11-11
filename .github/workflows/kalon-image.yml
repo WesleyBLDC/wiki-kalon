@@ -134,6 +134,7 @@ jobs:
             echo
             echo "Kalon commits since ${BASE}:"
             echo
-            git log --format='- %s' "${BASE}..${GITHUB_REF_NAME}" -- . ':(exclude)assets' | grep -v '^- Merge' || echo "- none"
+            # -> Fixups fold into their feature commit at the next replay, so only the features are listed
+            git log --format='- %s' "${BASE}..${GITHUB_REF_NAME}" -- . ':(exclude)assets' | grep -Ev '^- (Merge|fixup!|amend!|squash!)' || echo "- none"
           } > notes.md
           gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --title "${GITHUB_REF_NAME}" --notes-file notes.md --verify-tag
