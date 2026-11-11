@@ -1049,3 +1049,81 @@
 :root .w-drawer.bg-sidebar:not(.w-drawer--overlay, .kalon-sidebar-peek) {
   position: relative;
 }
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Editors                                                                                        */
+/* ---------------------------------------------------------------------------------------------- */
+
+/*
+  The Visual and Markdown editors' chrome, quiet like the rest of the page: the formatting bar and the
+  insert rail in the page's own colour with a hairline, grey icons that darken on hover, a soft wash
+  for a pressed button, and no blue bar, blue corner or orange brickwork. The Visual editor's centered
+  sheet loses its grey desk and shadow, so writing looks like the page it will become.
+*/
+:root {
+  .editor-visual-toolbar,
+  .editor-markdown-toolbar,
+  .editor-asciidoc-toolbar {
+    border-bottom: 1px solid var(--kalon-border);
+    border-left: 0;
+    background-color: var(--kalon-page);
+    background-image: none;
+    color: var(--kalon-text-2);
+
+    .w-btn:hover {
+      background-color: var(--kalon-hover);
+      color: var(--kalon-text);
+    }
+    .w-btn.is-active {
+      background-color: var(--kalon-active);
+      color: var(--kalon-text);
+    }
+  }
+
+  // -> The preview's caption and the Contents column's, bars of the same quiet kind, no brickwork
+  .editor-markdown-preview-toolbar,
+  .editor-asciidoc-preview-toolbar,
+  .editor-contents-toolbar {
+    border-bottom: 1px solid var(--kalon-border);
+    background-color: var(--kalon-page);
+    background-image: none;
+    color: var(--kalon-text-3);
+    padding-right: 0.5rem;
+  }
+  .editor-contents-label {
+    color: var(--kalon-text-3);
+  }
+
+  // -> A hairline between the source and its preview, not a 5px blue bar
+  .editor-markdown-mid,
+  .editor-asciidoc-mid {
+    border-right: 1px solid var(--kalon-border);
+  }
+
+  .editor-visual-sidebar,
+  .editor-markdown-sidebar,
+  .editor-asciidoc-sidebar {
+    border-top: 0;
+    border-inline-end: 1px solid var(--kalon-border);
+    background-color: var(--kalon-page);
+    color: var(--kalon-text-2);
+
+    .w-btn:hover {
+      background-color: var(--kalon-hover);
+      color: var(--kalon-text);
+    }
+  }
+
+  .editor-visual-type {
+    color: var(--kalon-text-3);
+  }
+
+  body .editor-visual-surface.is-centered {
+    background-color: var(--kalon-page);
+
+    &::before {
+      background-color: transparent;
+      box-shadow: none;
+    }
+  }
+}
