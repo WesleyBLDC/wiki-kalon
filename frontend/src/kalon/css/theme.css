@@ -53,6 +53,8 @@
   --kalon-accent-soft: rgb(35 131 226 / 0.1);
   /* -> The scroll-to-top disc in the sidebar's column, which draws a white arrow on it */
   --kalon-sidebar-btn: #6f6e69;
+  /* -> Code blocks and inline code in an article: a warm tint just off the page */
+  --kalon-code-surface: #f7f6f3;
 
   --kalon-radius-xs: 4px;
   --kalon-radius-sm: 6px;
@@ -65,6 +67,7 @@ body.body--dark,
 .w-dark-surface {
   --kalon-page: #191919;
   --kalon-sidebar: #202020;
+  --kalon-code-surface: #202020;
   --kalon-pop: #252525;
   --kalon-text: #e6e6e4;
   --kalon-text-2: #9b9b9b;

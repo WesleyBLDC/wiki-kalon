@@ -676,7 +676,7 @@
   `not print`, as upstream's are, so a page printed from the dark theme prints the light palette.
 */
 :root .page-contents {
-  --content-surface-code: #f7f6f3;
+  --content-surface-code: var(--kalon-code-surface);
   --content-rule: var(--kalon-border-strong);
   --content-table-shadow: none;
   --content-table-head: transparent;
@@ -688,7 +688,7 @@
 }
 @media not print {
   :root .body--dark .page-contents {
-    --content-surface-code: #202020;
+    --content-surface-code: var(--kalon-code-surface);
     --content-rule: var(--kalon-border-strong);
     --content-table-shadow: none;
     --content-table-head: transparent;
