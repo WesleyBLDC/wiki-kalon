@@ -26,6 +26,7 @@ Update this table in the same commit that adds, changes or drops a row.
 | --- | --- | --- |
 | `kalon: fork scaffolding` | Adds `.github/README.md`, `KALON.md`, `.claude/rules/kalon.md` and two workflows (`kalon-image.yml`, `kalon-upstream-watch.yml`). | None |
 | `kalon: theme` | Inter (vendored under `frontend/public/_assets/fonts/inter/`, SIL OFL) and Notion style light and dark tokens in `frontend/src/kalon/css/theme.css`; a flat light sidebar and header, flat page chrome and content ink in `frontend/src/kalon/css/_overrides.scss`. | `frontend/src/main.js` (imports the two sheets) |
+| `kalon: typography` | A 40px bold page title, a quieter content heading ramp (30, 24, 20px) with no rules under headings, and small sidebar section labels, all in `_overrides.scss`. Body text stays upstream's 16px / 1.6. | None |
 
 ## Clean fork rules
 

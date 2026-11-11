@@ -304,3 +304,95 @@
   --content-link: var(--kalon-accent-text);
   --content-h1: var(--kalon-text);
 }
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Typography                                                                                     */
+/* ---------------------------------------------------------------------------------------------- */
+
+/*
+  The page title: 40px bold with tight tracking, where upstream sets 34px regular (`text-h4`). On the
+  class rather than the token, so every header wearing it follows (the page, a version, a live note)
+  and `text-h4` elsewhere is left alone. 32px on a phone.
+*/
+:root .page-header-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+
+  @media (max-width: $breakpoint-xs-max) {
+    font-size: 2rem;
+    line-height: 1.2;
+  }
+}
+
+:root .page-header-subtitle {
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: normal;
+}
+
+/*
+  Content headings: one quieter ramp (30, 24, 20px at the default text size), weight 600, no rules
+  under the top two, tighter space above. In `em`, so the reader's Content Text Size setting still
+  scales them. Body text is already 16px / 1.6 upstream, on a phone too (no input zoom on iOS).
+*/
+:root .page-contents {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin-bottom: 0.4em;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  h1,
+  h2 {
+    padding-bottom: 0;
+
+    &::after {
+      content: none;
+    }
+  }
+
+  h1 {
+    margin-top: 1.6em;
+    font-size: 1.875em;
+    letter-spacing: -0.02em;
+  }
+  h2 {
+    margin-top: 1.4em;
+    font-size: 1.5em;
+    letter-spacing: -0.015em;
+  }
+  h3 {
+    margin-top: 1.2em;
+    font-size: 1.25em;
+    letter-spacing: -0.01em;
+  }
+
+  // -> The first heading in the article sits under the title, not a section's worth below it
+  > :first-child:is(h1, h2, h3) {
+    margin-top: 0.5em;
+  }
+
+  @media (max-width: $breakpoint-xs-max) {
+    h1 {
+      font-size: 1.625em;
+    }
+    h2 {
+      font-size: 1.375em;
+    }
+  }
+}
+
+// -> The curated menu's section labels, small and set apart like Notion's
+:root .sidebar-nav .sidebar-nav-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
