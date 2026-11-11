@@ -170,9 +170,28 @@
     border-inline-start-color: var(--kalon-border);
   }
 
+  // -> Notion's 30px rows with an 18px icon, where upstream's are 48px with a 24px icon; 44px on touch
   .w-item {
+    min-height: 30px;
     margin-inline: 8px;
+    padding-block: 0;
+    padding-inline: 8px;
     border-radius: var(--kalon-radius-sm);
+
+    @media (pointer: coarse) {
+      min-height: 44px;
+    }
+  }
+  .w-item-section--side {
+    justify-content: center;
+    align-items: center;
+    padding-inline-end: 10px;
+  }
+  .w-item-section--main ~ .w-item-section--side {
+    padding-inline: 10px 0;
+  }
+  .w-item-section--side > .w-icon {
+    font-size: 18px;
   }
   .sidebar-nav-split > .w-item {
     margin-inline: 0;
