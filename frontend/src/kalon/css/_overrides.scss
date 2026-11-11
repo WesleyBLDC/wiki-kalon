@@ -631,12 +631,12 @@
   }
 
   /*
-    Link cards (`{.links-list}`): a grid of bordered cards, as many across as fit at 240px, with the
+    Link cards (`{.links-list}`): a grid of bordered cards, as many across as fit at 300px (two in the 760px reading column), with the
     description on a line of its own under the title.
   */
   ul.links-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
     gap: 8px;
 
     > li {
@@ -657,6 +657,35 @@
     > li > p > a {
       height: 100%;
       padding: 0.75em 1em;
+    }
+
+    // -> An arrow at the card's end, as the board draws it; flipped for a right-to-left page
+    > li {
+      position: relative;
+
+      &::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        inset-inline-end: 1em;
+        width: 1em;
+        height: 1em;
+        background-color: var(--kalon-text-3);
+        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 11v2h12l-5.5 5.5l1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5L16 11z'/%3E%3C/svg%3E")
+          no-repeat center / contain;
+        transform: translateY(-50%);
+        pointer-events: none;
+      }
+      &:dir(rtl)::after {
+        transform: translateY(-50%) scaleX(-1);
+      }
+      &:hover::after {
+        background-color: var(--kalon-text);
+      }
+    }
+    > li > a,
+    > li > p > a {
+      padding-inline-end: 2.75em;
     }
 
     > li > a:not(.is-broken-link),
