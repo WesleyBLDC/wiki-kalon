@@ -98,6 +98,97 @@
   }
 }
 
+/*
+  The search results: a menu card in the page's colours instead of upstream's blurred black wash. A
+  small label over each group, and each page on one line with its path beside the title, as the
+  design board draws it.
+*/
+:root .searchpanel {
+  border: 1px solid var(--kalon-border);
+  border-radius: var(--kalon-radius);
+  background-color: var(--kalon-pop);
+  color: var(--kalon-text);
+  padding: 6px;
+  backdrop-filter: none;
+  box-shadow: var(--kalon-shadow-pop);
+
+  &-header {
+    min-height: 28px;
+    margin: 0;
+    padding: 4px 10px;
+    border-bottom: 0;
+    color: var(--kalon-text-3);
+    font-size: 0.75rem;
+    font-weight: 600;
+
+    .acrylic-btn {
+      align-self: center;
+      margin: 0;
+      border-radius: var(--kalon-radius-sm);
+      color: var(--kalon-accent-text);
+    }
+  }
+
+  &-suggestion {
+    gap: 10px;
+    min-height: 36px;
+    margin: 0;
+    padding: 6px 10px;
+    border-radius: var(--kalon-radius-sm);
+
+    &.is-active {
+      background-color: var(--kalon-hover);
+    }
+
+    &-icon {
+      font-size: 16px;
+      color: var(--kalon-text-2);
+      opacity: 1;
+    }
+
+    &-text {
+      flex: 1;
+      flex-direction: row;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    &-title {
+      flex: 1;
+    }
+
+    &-path {
+      flex: none;
+      max-width: 50%;
+      color: var(--kalon-text-3);
+      opacity: 1;
+    }
+  }
+
+  &-tips {
+    padding-inline: 10px;
+    color: var(--kalon-text-2);
+
+    &::before {
+      background-color: var(--kalon-border);
+    }
+  }
+
+  code {
+    color: var(--kalon-accent-text);
+  }
+
+  // -> The popular tags as quiet chips, in line with the labels; upstream colours them inline for its
+  //    black panel
+  .flex-wrap:has(> .w-chip) {
+    padding-inline: 10px;
+  }
+  .w-chip {
+    background-color: var(--kalon-hover) !important;
+    color: var(--kalon-text-2) !important;
+  }
+}
+
 /* ---------------------------------------------------------------------------------------------- */
 /* Sidebar                                                                                        */
 /* ---------------------------------------------------------------------------------------------- */
