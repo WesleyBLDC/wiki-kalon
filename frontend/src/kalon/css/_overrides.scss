@@ -1,0 +1,306 @@
+/*
+  Wiki.js Kalon: selector overrides, for what the tokens in `theme.css` cannot reach.
+
+  Every rule is prefixed with `:root`, which adds one class worth of specificity. Upstream component
+  styles ship in lazily loaded chunks that land in the document AFTER this sheet, so a tie on
+  specificity would go to upstream; outranking by one step is what makes these rules hold regardless
+  of the order the chunks load in. Where upstream keys a rule off `body--light` / `body--dark`, the
+  override names `body` too, which also outranks a scoped rule's data attribute.
+
+  Values come from `theme.css`; nothing here states a colour of its own.
+*/
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Shell                                                                                          */
+/* ---------------------------------------------------------------------------------------------- */
+
+:root {
+  // -> MainLayout paints the dark page `$dark-6`
+  body,
+  body.body--dark {
+    background-color: var(--kalon-page);
+  }
+
+  /*
+    The sidebar, flat beside the page: its own surface, a hairline on the edge it shares with the page,
+    no shadow. On whichever side the site puts it.
+  */
+  .w-drawer.bg-sidebar {
+    &.w-drawer--left {
+      box-shadow: inset -1px 0 0 var(--kalon-border);
+    }
+    &.w-drawer--right {
+      box-shadow: inset 1px 0 0 var(--kalon-border);
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Site header                                                                                    */
+/* ---------------------------------------------------------------------------------------------- */
+
+:root .site-header {
+  color: var(--kalon-text);
+  box-shadow: inset 0 -1px 0 var(--kalon-border);
+
+  /*
+    The header's buttons each take a colour by name, which `WBtn` resolves inline as
+    `var(--color-<name>)`: white for the search toggle and Log in, and a different hue for each of New,
+    Library, Inbox and Admin. On a light bar those are white on white and amber on grey, so the names
+    are repointed here, inside the header only, at the quiet icon grey.
+  */
+  --color-white: var(--kalon-text-2);
+  --color-blue-4: var(--kalon-text-2);
+  --color-positive: var(--kalon-text-2);
+  --color-amber: var(--kalon-text-2);
+  --color-pink: var(--kalon-text-2);
+
+  // -> The inbox count keeps white on its red badge
+  .w-badge {
+    --color-white: #fff;
+  }
+
+  .w-btn:not(:disabled):hover {
+    background-color: var(--kalon-hover);
+  }
+
+  // -> `AccountMenu` and the narrow screen's ⋮ menu colour their buttons from their own sheets, in
+  //    translucent white
+  .account-avbtn,
+  .header-actions-btn {
+    color: var(--kalon-text-2);
+  }
+}
+
+/*
+  The search field: a quiet pill tinted like a hovered row, with a hairline, instead of a dark pill on a
+  black bar. In use it lifts to the page colour.
+*/
+:root .header-search {
+  &-field {
+    border: 1px solid var(--kalon-border);
+    border-radius: var(--kalon-radius-sm);
+    background-color: var(--kalon-hover);
+    color: var(--kalon-text-2);
+  }
+  &-field--row {
+    background-color: var(--kalon-hover);
+  }
+  &-field.is-focused {
+    border-color: var(--kalon-border-strong);
+    background-color: var(--kalon-page);
+    color: var(--kalon-text);
+  }
+  &-kbd {
+    border-color: var(--kalon-border-strong);
+    border-radius: var(--kalon-radius-xs);
+    opacity: 1;
+  }
+}
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Sidebar                                                                                        */
+/* ---------------------------------------------------------------------------------------------- */
+
+/*
+  The locale and Browse bar over the nav, and the Edit Nav bar under it: flat, in the secondary grey,
+  set off by a hairline instead of upstream's bevelled gradients.
+*/
+:root {
+  .sidebar-actions {
+    background: none;
+    box-shadow: inset 0 -1px 0 var(--kalon-border);
+
+    &::after {
+      content: none;
+    }
+
+    .w-btn {
+      color: var(--kalon-text-2);
+      border-radius: var(--kalon-radius-sm);
+    }
+
+    .sidebar-actions-sep::after {
+      background: var(--kalon-border);
+    }
+  }
+
+  // -> Two classes: `WBar`'s own scoped tint is one class and a data attribute
+  .sidebar-footerbtns.w-bar {
+    color: var(--kalon-text-2);
+    background: none;
+    box-shadow: inset 0 1px 0 var(--kalon-border);
+  }
+
+  // -> The icon rail shown for pages that hide the nav
+  .sidebar-mini .w-btn {
+    --color-white: var(--kalon-text-2);
+  }
+}
+
+/*
+  The curated menu (`NavSidebar`), written for a dark sidebar: white icons and labels, a white notch on
+  the current page, translucent white rules. Recoloured for the light (or Notion dark) surface: rows
+  inset with rounded corners, the current page a flat wash in full ink, groups a hairline down the side.
+*/
+:root .sidebar-nav {
+  border-top: 0;
+
+  .w-list--dark {
+    color: var(--kalon-text);
+  }
+
+  .text-white,
+  .w-list .w-expansion-item__arrow,
+  .w-list--dark .w-item-section--side:not(.w-item-section--avatar) {
+    color: var(--kalon-text-2);
+  }
+
+  .w-list--dark .w-item-label--caption,
+  .w-list--dark .w-item-label--header,
+  .sidebar-nav-header {
+    color: var(--kalon-text-3);
+  }
+
+  .w-hairline--dark {
+    --w-hairline-color: var(--kalon-border);
+  }
+
+  .sidebar-nav-split__menu {
+    border-inline-start-color: var(--kalon-border);
+  }
+
+  .w-item {
+    margin-inline: 8px;
+    border-radius: var(--kalon-radius-sm);
+  }
+  .sidebar-nav-split > .w-item {
+    margin-inline: 0;
+  }
+  .sidebar-nav-split {
+    margin-inline: 8px;
+  }
+
+  .w-list--dark > .w-item--clickable:not(:has(:disabled)):hover,
+  .w-list--dark .w-item--clickable:not(:has(:disabled)):hover {
+    background-color: var(--kalon-hover);
+  }
+
+  .w-list .w-item.router-link-exact-active {
+    background-color: var(--kalon-active);
+    color: var(--kalon-text);
+    font-weight: 500;
+
+    &::after {
+      content: none;
+    }
+
+    .text-white {
+      color: var(--kalon-text);
+    }
+  }
+
+  .w-list .w-expansion-item__content {
+    margin-inline-start: 18px;
+    border-inline-start: 1px solid var(--kalon-border);
+    background-color: transparent;
+
+    &::before,
+    &::after {
+      content: none;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Page chrome                                                                                    */
+/* ---------------------------------------------------------------------------------------------- */
+
+:root body {
+  /*
+    The breadcrumb strip and the title band: the page's own colour, no gradients, one hairline under the
+    strip. The version view's indigo strip keeps its colour; it is what says "this is a record".
+  */
+  &.body--light,
+  &.body--dark {
+    .page-breadcrumbs:not(.page-breadcrumbs--version) {
+      background: var(--kalon-page);
+      color: var(--kalon-text);
+      --page-breadcrumbs-rule: var(--kalon-border);
+    }
+
+    .page-header {
+      background: var(--kalon-page);
+      border-bottom: 0;
+      --page-header-rule: transparent;
+      --page-header-underline: transparent;
+
+      &::before {
+        background-image: none;
+      }
+    }
+    .page-header-title {
+      color: var(--kalon-text);
+    }
+    .page-header-subtitle {
+      color: var(--kalon-text-2);
+    }
+
+    // -> One edge colour for the column, the tab strip and the contents column
+    .page-container {
+      --page-chrome-rule: var(--kalon-border);
+      border-top-color: var(--kalon-page);
+    }
+
+    .page-view-tabs {
+      background-color: var(--kalon-page);
+    }
+    .page-view-tab.is-active {
+      background-color: var(--kalon-page);
+      color: var(--kalon-text);
+    }
+
+    // -> The contents column and the action rail, on the page colour instead of grey panels
+    .page-sidebar {
+      background-color: var(--kalon-page);
+
+      .w-separator {
+        height: 1px;
+        --w-hairline-color: var(--kalon-border);
+
+        &::after {
+          background: var(--kalon-border);
+        }
+      }
+    }
+
+    .page-actions {
+      background-color: var(--kalon-page);
+      box-shadow: inset 1px 0 0 var(--kalon-border);
+    }
+
+    // -> The "Powered by" line under the article, a grey slab in both themes upstream
+    .site-footer {
+      background-color: var(--kalon-page);
+      color: var(--kalon-text-3);
+      box-shadow: inset 0 1px 0 var(--kalon-border);
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Page content                                                                                   */
+/* ---------------------------------------------------------------------------------------------- */
+
+/*
+  Content ink and links. Upstream's dark block is `.body--dark .page-contents`, so both are named to
+  outrank each theme's own declarations.
+*/
+:root .page-contents,
+:root .body--dark .page-contents {
+  --content-ink: var(--kalon-text);
+  --content-ink-muted: var(--kalon-text-2);
+  --content-ink-faint: var(--kalon-text-3);
+  --content-link: var(--kalon-accent-text);
+  --content-h1: var(--kalon-text);
+}

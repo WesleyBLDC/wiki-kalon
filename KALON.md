@@ -25,6 +25,7 @@ Update this table in the same commit that adds, changes or drops a row.
 | Commit subject | Purpose | Upstream files touched |
 | --- | --- | --- |
 | `kalon: fork scaffolding` | Adds `.github/README.md`, `KALON.md`, `.claude/rules/kalon.md` and two workflows (`kalon-image.yml`, `kalon-upstream-watch.yml`). | None |
+| `kalon: theme` | Inter (vendored under `frontend/public/_assets/fonts/inter/`, SIL OFL) and Notion style light and dark tokens in `frontend/src/kalon/css/theme.css`; a flat light sidebar and header, flat page chrome and content ink in `frontend/src/kalon/css/_overrides.scss`. | `frontend/src/main.js` (imports the two sheets) |
 
 ## Clean fork rules
 
@@ -53,6 +54,14 @@ How the Wiki.js 3 frontend is styled, for Kalon look work (checked against 3.3.0
 - Useful tokens: `--q-primary`, `--q-secondary`, `--q-accent`, `--q-header`, `--q-sidebar` (and their `--color-*` mirrors with `-light` and `-lighter` mixes), `--color-dark-1` to `--color-dark-6`, `--color-grey-*`, `--font-sans`, `--font-mono`, `--text-h1` to `--text-h6` with their `--font-weight` and `--line-height`.
 - Dark mode is the `body--dark` class (`frontend/src/composables/dark.js`); users already get a site, light or dark choice in the account menu and their profile, so Kalon defines token sets for both modes and adds no toggle logic.
 - Admin > Theme still works on top of Kalon: the backend injects a site's CSS override into the served page (`backend/helpers/appShell.ts`), never inside `/_admin`.
+
+How Kalon's own styling is wired (from `kalon: theme`):
+
+- Every colour, radius and font is a `--kalon-*` token in `frontend/src/kalon/css/theme.css`, once for light and once for dark (`body.body--dark` and its `.w-dark-surface` twin).
+- `.bg-header` and `.bg-sidebar` (`css/_base.scss`) read `--q-header` and `--q-sidebar`, which `App.vue` writes inline on `<html>`. `theme.css` redeclares both, and their `--color-*` mirrors, on `<body>`, so Admin > Theme's Header and Sidebar colours no longer apply on the reading screen. Primary, secondary and accent still come from Admin > Theme.
+- Upstream component styles load in lazy chunks after Kalon's sheets, so a tie on specificity goes to upstream. Every rule in `_overrides.scss` is prefixed with `:root` to outrank the rule it overrides by one class; where upstream keys off `body--light` or `body--dark`, the override names `body` too, which also beats a scoped rule's data attribute.
+- Content colours are overridden on both `.page-contents` and `.body--dark .page-contents`, because upstream's dark block uses the second.
+- The admin area keeps its own colours; only the font changes there.
 
 Community themes: as of November 2026 none targets Wiki.js 3; they are CSS for 2.x (Vuetify) and must be ported, not pasted.
 Check one with:

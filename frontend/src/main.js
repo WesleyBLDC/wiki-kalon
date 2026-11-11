@@ -22,6 +22,9 @@ import './css/app.scss'
   the page actually calls for one.
 */
 import 'virtual:excalidraw-fonts.css'
+// kalon: Kalon's design tokens and overrides, after upstream's own stylesheets (see `kalon/css/`)
+import './kalon/css/theme.css'
+import './kalon/css/_overrides.scss'
 
 import RootApp from './App.vue'
 

@@ -1,0 +1,102 @@
+/*
+  Wiki.js Kalon: design tokens.
+
+  Every colour, radius and font Kalon uses is a `--kalon-*` custom property declared here, once per
+  theme. `_overrides.scss` points upstream's own variables and selectors at these, so retinting Kalon
+  is a change to this file alone.
+
+  Values are Notion's warm greys and one muted blue, tuned until each text pair passes WCAG AA
+  (4.5:1): secondary text #6f6e69 is 4.8:1 on the light sidebar, links #1f6fc5 are 5.1:1 on white, and
+  in dark mode #9b9b9b is 5.9:1 and #529cca 5.4:1 on the sidebar.
+*/
+
+/*
+  Inter, self hosted like upstream's Roboto (`public/_assets/fonts/`), as one variable font per style.
+  SIL Open Font License; the licence is next to the files.
+*/
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/_assets/fonts/inter/InterVariable.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/_assets/fonts/inter/InterVariable-Italic.woff2') format('woff2');
+}
+
+/*
+  Unlayered, so it outranks the `--font-sans` Tailwind emits in `@layer theme`. The monospace font
+  stays upstream's.
+*/
+:root {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+
+  --kalon-page: #ffffff;
+  --kalon-sidebar: #f7f7f5;
+  --kalon-pop: #ffffff;
+  --kalon-text: #37352f;
+  --kalon-text-2: #6f6e69;
+  /* -> Labels share the secondary grey: anything lighter fails AA at 11-12px */
+  --kalon-text-3: #6f6e69;
+  --kalon-border: rgb(55 53 47 / 0.09);
+  --kalon-border-strong: rgb(55 53 47 / 0.16);
+  --kalon-hover: rgb(55 53 47 / 0.06);
+  --kalon-active: rgb(55 53 47 / 0.08);
+  /* -> Fills, focus rings and selection; links and accent text take `--kalon-accent-text` */
+  --kalon-accent: #2383e2;
+  --kalon-accent-text: #1f6fc5;
+  --kalon-accent-soft: rgb(35 131 226 / 0.1);
+  /* -> The scroll-to-top disc in the sidebar's column, which draws a white arrow on it */
+  --kalon-sidebar-btn: #6f6e69;
+
+  --kalon-radius-xs: 4px;
+  --kalon-radius-sm: 6px;
+  --kalon-radius: 8px;
+  --kalon-shadow-pop:
+    0 0 0 1px rgb(15 15 15 / 0.05), 0 3px 6px rgb(15 15 15 / 0.1), 0 9px 24px rgb(15 15 15 / 0.2);
+}
+
+body.body--dark,
+.w-dark-surface {
+  --kalon-page: #191919;
+  --kalon-sidebar: #202020;
+  --kalon-pop: #252525;
+  --kalon-text: #e6e6e4;
+  --kalon-text-2: #9b9b9b;
+  --kalon-text-3: #8f8f8f;
+  --kalon-border: rgb(255 255 255 / 0.09);
+  --kalon-border-strong: rgb(255 255 255 / 0.16);
+  --kalon-hover: rgb(255 255 255 / 0.055);
+  --kalon-active: rgb(255 255 255 / 0.08);
+  --kalon-accent: #529cca;
+  --kalon-accent-text: #529cca;
+  --kalon-accent-soft: rgb(82 156 202 / 0.14);
+  --kalon-sidebar-btn: #373737;
+  --kalon-shadow-pop:
+    0 0 0 1px rgb(255 255 255 / 0.06), 0 3px 6px rgb(0 0 0 / 0.3), 0 9px 24px rgb(0 0 0 / 0.4);
+}
+
+/*
+  Upstream's chrome colours, pointed at ours. `App.vue` writes `--q-header` and `--q-sidebar` inline on
+  <html> from Admin > Theme, and `.bg-header` / `.bg-sidebar` (`css/_base.scss`) read those directly,
+  so they are redeclared here on <body>: everything inside it inherits these instead of the inline
+  values, without touching how upstream writes them. The `--color-*` mirrors are resolved at :root,
+  so they are restated too.
+
+  Admin > Theme > Header and Sidebar colours therefore no longer apply on the reading screen.
+*/
+body {
+  --q-header: var(--kalon-sidebar);
+  --q-sidebar: var(--kalon-sidebar);
+  --color-header: var(--kalon-sidebar);
+  --color-sidebar: var(--kalon-sidebar);
+  --color-sidebar-light: var(--kalon-sidebar-btn);
+
+  color: var(--kalon-text);
+  background-color: var(--kalon-page);
+}
