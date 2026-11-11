@@ -308,6 +308,164 @@
 }
 
 /* ---------------------------------------------------------------------------------------------- */
+/* Page header                                                                                    */
+/* ---------------------------------------------------------------------------------------------- */
+
+/*
+  While a page is read, the breadcrumb strip is its top bar: the trail on the left, and on the right
+  when it was edited, watch, review, the ⋯ menu and Edit (`components/PageActions.vue`). So the header's
+  own reading actions and the action rail go, and "Last modified on" with them. The editor has no
+  breadcrumb strip and keeps the header's actions and the rail as upstream draws them. The version
+  view's indigo strip is left alone.
+*/
+:root .page-breadcrumbs:not(.page-breadcrumbs--version) {
+  align-items: center;
+  min-height: 44px;
+  padding-block: 4px;
+  font-size: 0.8125rem;
+
+  .w-breadcrumbs__el {
+    min-height: 28px;
+    padding-inline: 6px;
+    margin-inline: -6px;
+    border-radius: var(--kalon-radius-sm);
+    color: var(--kalon-text-2);
+
+    &:hover {
+      background-color: var(--kalon-hover);
+      color: var(--kalon-text);
+    }
+  }
+  li:last-child .w-breadcrumbs__el {
+    color: var(--kalon-text);
+  }
+  .w-breadcrumbs__separator {
+    color: var(--kalon-text-3);
+  }
+
+  // -> Upstream's "Last modified on <date>"; the top bar says "Edited <date>" instead
+  > .flex-none > .text-caption {
+    display: none;
+  }
+}
+
+:root .page-header-actions:not(.has-editor-actions) {
+  display: none;
+}
+
+:root .page-breadcrumbs:not(.page-breadcrumbs--version) ~ .page-container > .page-actions {
+  display: none;
+}
+
+/*
+  The title block: flat and sized by its contents instead of a 95px band, the icon at 40px on the title
+  line, with room above the title like a document's top margin.
+*/
+:root .page-header {
+  height: auto;
+  min-height: 0;
+  flex-shrink: 0;
+  padding-top: 32px;
+
+  @media (max-width: $breakpoint-xs-max) {
+    padding-top: 16px;
+  }
+
+  // -> Upstream sets the sizes inline, so only `!important` reaches them; a page with no icon draws none
+  &:has(.page-header-icon > .w-icon, .page-header-icon > .w-btn) {
+    --page-header-icon-size: var(--kalon-title-icon) !important;
+  }
+
+  .page-header-icon {
+    align-items: flex-start;
+    padding-top: 16px;
+
+    @media (max-width: $breakpoint-xs-max) {
+      padding-top: 8px;
+    }
+
+    > .w-icon,
+    > .w-btn,
+    > .w-btn .w-icon {
+      font-size: var(--kalon-title-icon) !important;
+      min-height: var(--kalon-title-icon) !important;
+      border-radius: var(--kalon-radius-sm);
+    }
+  }
+
+  .page-header-text {
+    justify-content: flex-start;
+    padding-bottom: 8px;
+  }
+
+  // -> The editor's Save and Close row, level with the title rather than centred in a tall band
+  .page-header-actions {
+    align-items: flex-start;
+  }
+}
+:root .page-header.is-aligned {
+  min-height: 0;
+}
+
+/*
+  The contents column no longer repeats the tags and the last editor, which are under the title now
+  (`components/PageMeta.vue`); tags are still edited from Properties. Only where it is a column: below
+  750px it is a panel the reader opens on purpose, and its opener shows whenever the column exists, so
+  emptying it there would leave a button that opens nothing. A column left with nothing to show goes.
+*/
+@media (min-width: 750px) {
+  :root .page-sidebar {
+    > .p-4:has([data-icon='la:tags']),
+    > .w-separator:has(+ .p-4 [data-icon='la:tags']),
+    > .p-4:has([data-icon='la:user-edit']),
+    > .p-4:has([data-icon='la:user-edit']) + .px-4,
+    > .w-separator:has(+ .p-4 [data-icon='la:user-edit']) {
+      display: none;
+    }
+
+    &:has(> .p-4 [data-icon='la:tags'], > .p-4 [data-icon='la:user-edit']):not(
+        :has(.page-toc, [data-icon='la:star-half-alt'])
+      ) {
+      display: none;
+    }
+  }
+}
+
+/*
+  Article, Talk and Links as small text tabs with a 2px underline on the open one, instead of folder
+  tabs raised out of a grey strip.
+*/
+:root body.body--light,
+:root body.body--dark {
+  .page-view-tabs {
+    align-items: stretch;
+    gap: 4px;
+    padding-inline: 12px;
+  }
+
+  .page-view-tab {
+    height: auto;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    clip-path: none;
+    color: var(--kalon-text-2);
+
+    &:hover:not(.is-active) {
+      background: none;
+      color: var(--kalon-text);
+    }
+
+    &.is-active {
+      color: var(--kalon-text);
+      box-shadow: inset 0 -2px 0 var(--kalon-text);
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------------------------- */
 /* Page content                                                                                   */
 /* ---------------------------------------------------------------------------------------------- */
 

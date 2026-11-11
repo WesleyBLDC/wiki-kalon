@@ -53,6 +53,8 @@
             </template>
           </i18n-t>
         </div>
+        <!-- kalon: the page's actions move up here, beside where it sits (kalon/components/PageActions.vue) -->
+        <page-actions />
       </div>
     </div>
     <page-header
@@ -66,6 +68,10 @@
             }
           : null
       " />
+    <!-- kalon: tags and who last edited, under the title (kalon/components/PageMeta.vue) -->
+    <page-meta
+      v-if="!pageStore.notFound && !editorStore.isActive"
+      :inset="headerBounds?.inset ?? null" />
     <!-- -> `min-h-0` so the columns inside can be shorter than their content and scroll -->
     <div
       class="page-container flex min-h-0 flex-nowrap items-stretch"
@@ -746,6 +752,9 @@ import PageUnlockDialog from '@/components/PageUnlockDialog.vue'
 import PageViewTabs from '@/components/PageViewTabs.vue'
 import SideDialog from '@/components/SideDialog.vue'
 import SiteBanner from '@/components/SiteBanner.vue'
+// kalon: the page's top bar actions and the line under its title
+import PageActions from '@/kalon/components/PageActions.vue'
+import PageMeta from '@/kalon/components/PageMeta.vue'
 
 /*
   Neither of these is wanted by a page view that has no comments, and the talk view brings a markdown

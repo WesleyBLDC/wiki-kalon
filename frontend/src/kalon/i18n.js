@@ -23,6 +23,19 @@ export const kalonMessages = {
         resize: 'Resize sidebar',
         collapse: 'Collapse sidebar',
         expand: 'Expand sidebar'
+      },
+      page: {
+        more: 'More actions',
+        history: 'Page history',
+        source: 'Page source',
+        properties: 'Properties',
+        data: 'Page data',
+        duplicate: 'Duplicate',
+        move: 'Move or rename',
+        rerender: 'Rerender',
+        delete: 'Delete page',
+        edited: 'Edited {date}',
+        editedBy: 'Last edited by {name}'
       }
     }
   }
