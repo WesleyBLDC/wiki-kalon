@@ -34,14 +34,13 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 
 import { tagBrowserRoute } from '@/helpers/tagBrowser'
 import { usePageStore } from '@/stores/page'
 import { useSiteStore } from '@/stores/site'
 import { useUserStore } from '@/stores/user'
 
-import { kalonMessages } from '../i18n'
+import { useKalonI18n } from '../i18n'
 
 /**
  * The page's tags and who last edited it and when, under the title instead of in the contents column,
@@ -63,7 +62,7 @@ const pageStore = usePageStore()
 const siteStore = useSiteStore()
 const userStore = useUserStore()
 
-const { t } = useI18n({ messages: kalonMessages, useScope: 'local' })
+const { t } = useKalonI18n()
 
 const showTags = computed(() => pageStore.showTags && pageStore.tags?.length > 0)
 

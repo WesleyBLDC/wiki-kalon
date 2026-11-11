@@ -1,6 +1,6 @@
 <template>
   <w-btn
-    v-if="hasEntries"
+    v-if="isSaved"
     class="kalon-page-btn"
     flat
     dense
@@ -30,51 +30,16 @@
             </button>
           </div>
         </div>
-        <w-separator class="my-1" />
-        <w-item v-if="showHistory" clickable @click="viewPageHistory">
-          <w-item-section side><w-icon name="la:history" size="xs" /></w-item-section>
-          <w-item-section>{{ t('kalon.page.history') }}</w-item-section>
-        </w-item>
-        <w-item v-if="showSource" clickable @click="viewPageSource">
-          <w-item-section side><w-icon name="la:code" size="xs" /></w-item-section>
-          <w-item-section>{{ t('kalon.page.source') }}</w-item-section>
-        </w-item>
-        <w-item v-if="siteStore.theme.showPrintBtn" clickable @click="printPage">
-          <w-item-section side><w-icon name="la:print" size="xs" /></w-item-section>
-          <w-item-section>{{ t('common.actions.print') }}</w-item-section>
-        </w-item>
-        <template v-if="userStore.can(`write:pages`)">
-          <w-item clickable @click="togglePageProperties">
-            <w-item-section side><w-icon name="la:pen-nib" size="xs" /></w-item-section>
-            <w-item-section>{{ t('kalon.page.properties') }}</w-item-section>
-          </w-item>
-          <w-item v-if="flagsStore.experimental" clickable @click="togglePageData">
-            <w-item-section side><w-icon name="la:project-diagram" size="xs" /></w-item-section>
-            <w-item-section>{{ t('kalon.page.data') }}</w-item-section>
-          </w-item>
-        </template>
-        <w-separator v-if="hasMoveGroup" class="my-1" />
-        <w-item v-if="canDuplicate" clickable @click="duplicatePage">
-          <w-item-section side><w-icon name="la:copy" size="xs" /></w-item-section>
-          <w-item-section>{{ t('kalon.page.duplicate') }}</w-item-section>
-        </w-item>
-        <w-item v-if="userStore.can(`manage:pages`)" clickable @click="renamePage">
-          <w-item-section side><w-icon name="la:share" size="xs" /></w-item-section>
-          <w-item-section>{{ t('kalon.page.move') }}</w-item-section>
-        </w-item>
-        <w-item v-if="userStore.can(`write:pages`) && canConvert" clickable @click="convertPage">
-          <w-item-section side><w-icon name="la:magic" size="xs" /></w-item-section>
-          <w-item-section>{{ t('convertPage.action') }}</w-item-section>
-        </w-item>
-        <w-item v-if="userStore.can(`write:pages`) && hasBody" clickable @click="rerenderPage">
-          <w-item-section side><w-icon name="la:sun" size="xs" /></w-item-section>
-          <w-item-section>{{ t('kalon.page.rerender') }}</w-item-section>
-        </w-item>
-        <template v-if="userStore.can(`delete:pages`)">
+        <template v-for="group of groups" :key="group.key">
           <w-separator class="my-1" />
-          <w-item class="kalon-page-menu-danger" clickable @click="deletePage">
-            <w-item-section side><w-icon name="la:trash" size="xs" /></w-item-section>
-            <w-item-section>{{ t('kalon.page.delete') }}</w-item-section>
+          <w-item
+            v-for="row of group.rows"
+            :key="row.key"
+            :class="{ 'kalon-page-menu-danger': row.isDanger }"
+            clickable
+            @click="row.run">
+            <w-item-section side><w-icon :name="row.icon" size="xs" /></w-item-section>
+            <w-item-section>{{ t(row.label) }}</w-item-section>
           </w-item>
         </template>
       </w-list>
@@ -85,7 +50,6 @@
 <script setup>
 import { computed, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
 
 import { dialog } from '@/composables/dialog'
 import { notify } from '@/composables/notify'
@@ -97,7 +61,7 @@ import { useSiteStore } from '@/stores/site'
 import { useUserStore } from '@/stores/user'
 
 import { APPEARANCE, useAppearance } from '../composables/appearance'
-import { kalonMessages } from '../i18n'
+import { useKalonI18n } from '../i18n'
 
 /**
  * The page's ⋯ menu in the top bar: a Site, Light, Dark switch, then as labelled rows what the
@@ -116,7 +80,7 @@ const siteStore = useSiteStore()
 const userStore = useUserStore()
 
 const router = useRouter()
-const { t } = useI18n({ messages: kalonMessages })
+const { t } = useKalonI18n()
 const { setAppearance } = useAppearance()
 
 /** Site, Light, Dark: the account menu's three choices, set directly from here (see the board). */
@@ -144,15 +108,97 @@ const showHistory = computed(
 )
 const showSource = computed(() => hasBody.value && isSaved.value && canViewSource.value)
 
-const hasMoveGroup = computed(
-  () =>
-    canDuplicate.value ||
-    userStore.can('manage:pages') ||
-    (userStore.can('write:pages') && (canConvert.value || hasBody.value))
-)
-
-// -> The appearance switch is always there, so the menu is offered for every saved page
-const hasEntries = computed(() => isSaved.value)
+/**
+ * The rows under the appearance switch, in three groups (reading, moving and changing, deleting), each
+ * row there only for whom the rail's matching button is. A rule goes above each group that has a row,
+ * so none is drawn twice or left dangling.
+ */
+const groups = computed(() => {
+  const canWrite = userStore.can('write:pages')
+  return [
+    {
+      key: 'reading',
+      rows: [
+        showHistory.value && {
+          key: 'history',
+          icon: 'la:history',
+          label: 'kalon.page.history',
+          run: viewPageHistory
+        },
+        showSource.value && {
+          key: 'source',
+          icon: 'la:code',
+          label: 'kalon.page.source',
+          run: viewPageSource
+        },
+        siteStore.theme.showPrintBtn && {
+          key: 'print',
+          icon: 'la:print',
+          label: 'common.actions.print',
+          run: printPage
+        },
+        canWrite && {
+          key: 'properties',
+          icon: 'la:pen-nib',
+          label: 'kalon.page.properties',
+          run: togglePageProperties
+        },
+        canWrite &&
+          flagsStore.experimental && {
+            key: 'data',
+            icon: 'la:project-diagram',
+            label: 'kalon.page.data',
+            run: togglePageData
+          }
+      ]
+    },
+    {
+      key: 'change',
+      rows: [
+        canDuplicate.value && {
+          key: 'duplicate',
+          icon: 'la:copy',
+          label: 'kalon.page.duplicate',
+          run: duplicatePage
+        },
+        userStore.can('manage:pages') && {
+          key: 'move',
+          icon: 'la:share',
+          label: 'kalon.page.move',
+          run: renamePage
+        },
+        canWrite &&
+          canConvert.value && {
+            key: 'convert',
+            icon: 'la:magic',
+            label: 'convertPage.action',
+            run: convertPage
+          },
+        canWrite &&
+          hasBody.value && {
+            key: 'rerender',
+            icon: 'la:sun',
+            label: 'kalon.page.rerender',
+            run: rerenderPage
+          }
+      ]
+    },
+    {
+      key: 'delete',
+      rows: [
+        userStore.can('delete:pages') && {
+          key: 'delete',
+          icon: 'la:trash',
+          label: 'kalon.page.delete',
+          run: deletePage,
+          isDanger: true
+        }
+      ]
+    }
+  ]
+    .map((group) => ({ ...group, rows: group.rows.filter(Boolean) }))
+    .filter((group) => group.rows.length > 0)
+})
 
 /** The side the bar ends on, which a menu hanging off its buttons aligns to (as `PageHeader`). */
 const endSide = computed(() =>

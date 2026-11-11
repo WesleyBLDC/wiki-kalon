@@ -452,7 +452,12 @@
   }
 }
 
-:root .page-header-actions:not(.has-editor-actions) {
+// -> The page view's own header only: the version view and live notes use the same class for actions
+//    of their own, which have no other place
+:root
+  .page-breadcrumbs:not(.page-breadcrumbs--version)
+  ~ .page-header
+  > .page-header-actions:not(.has-editor-actions) {
   display: none;
 }
 
