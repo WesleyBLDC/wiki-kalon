@@ -62,12 +62,13 @@ function onPointerDown(ev) {
 
 function onPointerMove(ev) {
   const delta = props.side === 'right' ? startX - ev.clientX : ev.clientX - startX
-  setSidebarWidth(startWidth + delta)
+  setSidebarWidth(startWidth + delta, { save: false })
 }
 
 function onPointerUp(ev) {
   isDragging.value = false
   ev.currentTarget.removeEventListener('pointermove', onPointerMove)
+  setSidebarWidth(layout.width)
 }
 
 function onKeydown(ev) {

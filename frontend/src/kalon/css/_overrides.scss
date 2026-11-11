@@ -1051,7 +1051,7 @@
 /* ---------------------------------------------------------------------------------------------- */
 
 // -> The positioning context for the resize handle on its inner edge, while the drawer is a column
-:root .w-drawer.bg-sidebar:not(.w-drawer--overlay, .kalon-sidebar-peek) {
+:root .w-drawer.bg-sidebar:not(.w-drawer--overlay, .kalon-sidebar-floating) {
   position: relative;
 }
 

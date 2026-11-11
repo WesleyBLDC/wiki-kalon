@@ -18,9 +18,20 @@
 </template>
 
 <script setup>
-import { releaseSidebarPeek, requestSidebarPeek } from '../composables/sidebarLayout'
+import { watch } from 'vue'
+import { useRoute } from 'vue-router'
+
+import {
+  endSidebarPeek,
+  releaseSidebarPeek,
+  requestSidebarPeek
+} from '../composables/sidebarLayout'
 
 import SidebarToggleButton from './SidebarToggleButton.vue'
+
+// -> Picking a page from the floating sidebar is done with it: the page it opened is what to see
+const route = useRoute()
+watch(() => route.fullPath, endSidebarPeek)
 
 defineProps({
   /** Whether the site puts its sidebar on the right. */
@@ -54,7 +65,7 @@ defineProps({
   The floating sidebar: lifted off the page as a card inset from the window's edges, over the page
   rather than beside it. Out of the layout's grid, so the page keeps its width while it shows.
 */
-:root .w-drawer.kalon-sidebar-peek {
+:root .w-drawer.kalon-sidebar-floating {
   position: fixed;
   inset-block: 8px;
   left: 8px;

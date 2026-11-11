@@ -1,4 +1,4 @@
-import { nextTick, onBeforeUnmount, onMounted, reactive } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive } from 'vue'
 
 /**
  * The sidebar's width and whether it is collapsed, on a wide screen.
@@ -32,10 +32,35 @@ function read() {
 }
 
 /**
- * `peeking` is the collapsed sidebar floated over the page for a moment, from a hover on the left edge
- * or the expand glyph; it is never saved, and collapsing or expanding ends it.
+ * Where the peek is: the collapsed sidebar floated over the page for a moment, from a hover on the
+ * window's edge or the expand glyph. Never saved.
+ *
+ * - `off`: not floating.
+ * - `opening`: the pointer rests on the edge or the glyph; it floats in after `PEEK_OPEN_DELAY`.
+ * - `shown`: floating, with the pointer on it.
+ * - `held`: floating with the pointer away, kept by something inside it: typing in its search, or one
+ *   of its menus (which open outside the panel). Letting go of that starts `closing`; Escape or a press
+ *   outside ends it at once.
+ * - `closing`: the pointer left; it goes after `PEEK_CLOSE_DELAY` unless the pointer comes back.
  */
-const layout = reactive({ ...read(), peeking: false })
+export const PEEK = Object.freeze({
+  OFF: 'off',
+  OPENING: 'opening',
+  SHOWN: 'shown',
+  HELD: 'held',
+  CLOSING: 'closing'
+})
+
+/** What can happen to a peek. `DISMISS` is Escape, a press outside, a page opened or a collapse change. */
+const PEEK_EVENT = Object.freeze({
+  POINTER_IN: 'pointerIn',
+  POINTER_OUT: 'pointerOut',
+  TIMER: 'timer',
+  LET_GO: 'letGo',
+  DISMISS: 'dismiss'
+})
+
+const layout = reactive({ ...read(), peek: PEEK.OFF })
 
 function save() {
   try {
@@ -48,9 +73,12 @@ function save() {
   }
 }
 
-export function setSidebarWidth(width) {
+/** `save: false` while a drag is under way, which saves once when it ends rather than on every move. */
+export function setSidebarWidth(width, { save: shouldSave = true } = {}) {
   layout.width = clamp(width)
-  save()
+  if (shouldSave) {
+    save()
+  }
 }
 
 export function setSidebarCollapsed(collapsed) {
@@ -63,52 +91,88 @@ export function setSidebarCollapsed(collapsed) {
 const PEEK_OPEN_DELAY = 120
 const PEEK_CLOSE_DELAY = 300
 
-/** The one pending peek change, so a later hover or leave replaces an earlier one. */
+/** The one pending timer, for `opening` or `closing`; every transition clears it. */
 let peekTimer = 0
 
-function schedulePeek(peeking, delay) {
+/** Where a peek goes from `peek` on `event`; the same state when the event means nothing there. */
+function nextPeek(peek, event) {
+  if (event === PEEK_EVENT.DISMISS) {
+    return PEEK.OFF
+  }
+  switch (peek) {
+    case PEEK.OFF:
+      return event === PEEK_EVENT.POINTER_IN && layout.collapsed ? PEEK.OPENING : peek
+    case PEEK.OPENING:
+      if (event === PEEK_EVENT.TIMER) {
+        return PEEK.SHOWN
+      }
+      return event === PEEK_EVENT.POINTER_OUT ? PEEK.OFF : peek
+    case PEEK.SHOWN:
+      if (event !== PEEK_EVENT.POINTER_OUT) {
+        return peek
+      }
+      return isPeekHeld() ? PEEK.HELD : PEEK.CLOSING
+    case PEEK.HELD:
+      if (event === PEEK_EVENT.POINTER_IN) {
+        return PEEK.SHOWN
+      }
+      return event === PEEK_EVENT.LET_GO && !isPeekHeld() ? PEEK.CLOSING : peek
+    case PEEK.CLOSING:
+      if (event === PEEK_EVENT.POINTER_IN) {
+        return PEEK.SHOWN
+      }
+      return event === PEEK_EVENT.TIMER ? PEEK.OFF : peek
+    default:
+      return PEEK.OFF
+  }
+}
+
+function peekTransition(event) {
+  const next = nextPeek(layout.peek, event)
+  if (next === layout.peek) {
+    return
+  }
   window.clearTimeout(peekTimer)
-  peekTimer = window.setTimeout(() => {
-    layout.peeking = peeking && layout.collapsed
-  }, delay)
+  layout.peek = next
+  if (next === PEEK.OPENING || next === PEEK.CLOSING) {
+    const delay = next === PEEK.OPENING ? PEEK_OPEN_DELAY : PEEK_CLOSE_DELAY
+    peekTimer = window.setTimeout(() => peekTransition(PEEK_EVENT.TIMER), delay)
+  }
 }
 
-/** The pointer reached the edge or the glyph of a collapsed sidebar: float it in after a beat. */
+/** The pointer reached the edge, the glyph or the floating sidebar. */
 export function requestSidebarPeek() {
-  if (layout.collapsed && !layout.peeking) {
-    schedulePeek(true, PEEK_OPEN_DELAY)
-  } else {
-    window.clearTimeout(peekTimer)
-  }
+  peekTransition(PEEK_EVENT.POINTER_IN)
 }
 
-/**
- * The pointer left the floating sidebar or what calls it up. It stays while something inside it holds
- * the reader: the focus (typing a search) or one of its menus, which open outside the panel. Those
- * end it with a click elsewhere or Escape instead (`useSidebarLayout`).
- */
+/** The pointer left the floating sidebar or what calls it up. */
 export function releaseSidebarPeek() {
-  if (!layout.peeking) {
-    window.clearTimeout(peekTimer)
-    return
-  }
-  if (isPeekHeld()) {
-    return
-  }
-  schedulePeek(false, PEEK_CLOSE_DELAY)
+  peekTransition(PEEK_EVENT.POINTER_OUT)
 }
 
 export function endSidebarPeek() {
-  window.clearTimeout(peekTimer)
-  layout.peeking = false
+  peekTransition(PEEK_EVENT.DISMISS)
 }
 
+/** Whether the sidebar is floating over the page, for the layout to draw it so. */
+function isFloating() {
+  return layout.peek === PEEK.SHOWN || layout.peek === PEEK.HELD || layout.peek === PEEK.CLOSING
+}
+
+// -> The drawer carries this class whenever the sidebar is collapsed, peeking or not, so it never
+//    changes shape as it slides away
 function peekPanel() {
-  return document.querySelector('.kalon-sidebar-peek')
+  return document.querySelector('.kalon-sidebar-floating')
 }
 
+// -> Typing in the panel (its search) or one of its menus open; a link or button merely focused by a click
+//    does not hold it, which would leave it over the page after a page was picked
 function isPeekHeld() {
-  return Boolean(peekPanel()?.contains(document.activeElement) || document.querySelector('.w-menu'))
+  const focused = document.activeElement
+  return Boolean(
+    (peekPanel()?.contains(focused) && focused?.matches?.('input, textarea')) ||
+    document.querySelector('.w-menu')
+  )
 }
 
 export function toggleSidebarCollapsed() {
@@ -150,7 +214,32 @@ export function sidebarModeFor({ isAvailable, isWide, isRail }) {
   if (!layout.collapsed) {
     return SIDEBAR_MODE.OPEN
   }
-  return layout.peeking ? SIDEBAR_MODE.PEEK : SIDEBAR_MODE.COLLAPSED
+  return isFloating() ? SIDEBAR_MODE.PEEK : SIDEBAR_MODE.COLLAPSED
+}
+
+/**
+ * Everything the layout reads off the sidebar's shape, derived in one place from `sidebarModeFor`:
+ * `inputs` returns `{ isAvailable, isWide, isRail }`. A reactive object, so its fields read as values.
+ */
+export function useSidebarShape(inputs) {
+  const mode = computed(() => sidebarModeFor(inputs()))
+  const isOneOf = (...modes) => computed(() => modes.includes(mode.value))
+  return reactive({
+    mode,
+    /** Drawn as a column or floating; the narrow overlay's openness is upstream's own state. */
+    isDrawn: isOneOf(SIDEBAR_MODE.RAIL, SIDEBAR_MODE.OPEN, SIDEBAR_MODE.PEEK),
+    /** The full sidebar on a wide screen, in any state: no site header then, and the dragged width. */
+    isFullWide: isOneOf(SIDEBAR_MODE.OPEN, SIDEBAR_MODE.COLLAPSED, SIDEBAR_MODE.PEEK),
+    /** The site header's contents are in the sidebar. */
+    holdsHeader: isOneOf(SIDEBAR_MODE.OPEN, SIDEBAR_MODE.PEEK),
+    /**
+     * Put away by the reader, peeking or not: the glyph in the corner, and the floating style. Not the
+     * same as `layout.collapsed`, the saved choice, which also holds on a narrow screen or the rail.
+     */
+    isPutAway: isOneOf(SIDEBAR_MODE.COLLAPSED, SIDEBAR_MODE.PEEK),
+    isPeeking: isOneOf(SIDEBAR_MODE.PEEK),
+    canResize: isOneOf(SIDEBAR_MODE.OPEN)
+  })
 }
 
 /** The layout state alone, for components that read or change it without owning the shortcut. */
@@ -180,7 +269,7 @@ async function focusSidebarSearch() {
  * - Ctrl+K, while the sidebar is collapsed, opens it with its search field focused. Upstream's
  *   `HeaderSearch` owns Ctrl+K, but it lives in the sidebar and is not mounted while it is collapsed.
  *
- * Both are left alone while typing, while `isBlocked()` says so (an overlay open), and while
+ * Ctrl+K is left alone while typing. Both are left alone while `isBlocked()` says so (an overlay open), and while
  * `isCollapsible()` says the sidebar cannot be collapsed at all (a narrow screen, the icon rail).
  */
 export function useSidebarLayout({
@@ -197,7 +286,8 @@ export function useSidebarLayout({
     if (!isToggle && !isSearch) {
       return
     }
-    if (isTyping(ev.target) || isBlocked() || !isCollapsible()) {
+    // -> Ctrl+K belongs to what is being typed in; Ctrl+\ types nothing, so it works from an editor too
+    if ((isSearch && isTyping(ev.target)) || isBlocked() || !isCollapsible()) {
       return
     }
     ev.preventDefault()
@@ -210,24 +300,33 @@ export function useSidebarLayout({
   }
   // -> A peek held open by its focus or a menu ends with Escape or a press outside the panel and its menus
   function onPeekKeydown(ev) {
-    if (ev.key === 'Escape' && layout.peeking && !document.querySelector('.w-menu')) {
+    if (ev.key === 'Escape' && isFloating() && !document.querySelector('.w-menu')) {
       endSidebarPeek()
     }
   }
   function onPointerdown(ev) {
-    if (layout.peeking && !ev.target?.closest?.('.kalon-sidebar-peek, .w-menu')) {
+    if (isFloating() && !ev.target?.closest?.('.kalon-sidebar-floating, .w-menu')) {
       endSidebarPeek()
+    }
+  }
+  // -> Focus leaving the search, or a menu closing (its item loses focus), may let go of a held peek.
+  //    After the event, once the focus has landed and the menu is gone
+  function onFocusout() {
+    if (layout.peek === PEEK.HELD) {
+      window.setTimeout(() => peekTransition(PEEK_EVENT.LET_GO))
     }
   }
   onMounted(() => {
     window.addEventListener('keydown', onKeydown)
     window.addEventListener('keydown', onPeekKeydown)
     window.addEventListener('pointerdown', onPointerdown, true)
+    window.addEventListener('focusout', onFocusout)
   })
   onBeforeUnmount(() => {
     window.removeEventListener('keydown', onKeydown)
     window.removeEventListener('keydown', onPeekKeydown)
     window.removeEventListener('pointerdown', onPointerdown, true)
+    window.removeEventListener('focusout', onFocusout)
     endSidebarPeek()
   })
   return layout
