@@ -26,3 +26,4 @@ It customizes only the frontend and replays onto each new upstream release, so e
 - **Stay generic.** Write nothing about a particular deployment: no real domains, emails, company or team names, ids, servers or screenshots of real content. Use `example.com` in examples.
 - **Offer generic improvements upstream** as small PRs per `.github/CONTRIBUTING.md`. An accepted PR is a commit we stop carrying.
 - **Update the carried commits table in `KALON.md` in the same commit** that adds, changes or drops a Kalon commit.
+- **In workflows and scripts, pass `--repo` to every `gh` command.** In a fork, `gh` defaults to the parent repository (`requarks/wiki`), so a bare `gh release create` or `gh issue create` targets upstream and fails.
