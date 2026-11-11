@@ -38,20 +38,8 @@ Update this table in the same commit that adds, changes or drops a row.
 
 ## Clean fork rules
 
-These rules keep every upgrade a cheap replay.
-They are also in `.claude/rules/kalon.md` for agents.
-
-1. **Additive first.** Our code lives in new files under `frontend/src/kalon/` (`components/`, `composables/`, `css/`). Theme tokens go in `css/theme.css`, selector overrides in `css/_overrides.scss`.
-2. **Tiny marked seams.** An unavoidable edit to an upstream file is minimal and carries a comment starting with `kalon:` that explains why. `git grep "kalon:"` lists every touch point.
-3. **Never edit upstream files for housekeeping.** Upstream workflows are disabled through the GitHub API, not deleted. Upstream `README.md`, `CLAUDE.md` and `package.json` stay untouched. The version is set at build time, like upstream's CI.
-4. **Follow upstream patterns.** Before touching an area, read and obey upstream `CLAUDE.md`, `frontend/CLAUDE.md`, `backend/CLAUDE.md`, `blocks/CLAUDE.md` and the matching `.claude/rules/*.md`. Use the shared W components in `frontend/src/components/shared`, Pinia stores, the existing API client and the existing API endpoints the way upstream components do. No parallel data paths, no new endpoints.
-5. **No database changes, no new stored settings.** Add no new npm dependencies unless unavoidable, and pin any exactly.
-6. **Tokens before selectors.** Restyle by overriding upstream CSS variables. New variables are named `--kalon-*`, CSS classes `.kalon-*`, i18n keys `kalon.*`.
-7. **Every UI change works everywhere.** Phone, tablet and desktop, using upstream breakpoints and the narrow layout mode where the sidebar becomes an overlay below `SIDEBAR_OVERLAY_BELOW` in `frontend/src/layouts/MainLayout.vue`. Touch targets are at least 44px, with no horizontal scroll. Light and dark mode (`body--dark`) both work, and keyboard use and WCAG AA contrast are kept.
-8. **Compatible with every editor and content path.** Markdown, Visual, AsciiDoc, Excalidraw, Git sync and MCP edits.
-9. **One feature per commit.** The subject is `kalon: <what>`. Fixes made during a release use `git commit --fixup` and are folded in with `--autosquash` on the next replay.
-10. **Generic.** Nothing about any particular deployment: no real domains, emails, company or team names, ids, servers or screenshots of real content. Examples use `example.com`.
-11. **Upstreamable.** Generic improvements are offered to `requarks/wiki` as small PRs, following its `.github/CONTRIBUTING.md`. Each accepted PR is a commit we stop carrying.
+The rules that keep every upgrade a cheap replay are in [`.claude/rules/kalon.md`](.claude/rules/kalon.md).
+They apply to people and agents alike, and live in that one file so they cannot drift apart.
 
 ## Theming reference
 
@@ -61,7 +49,7 @@ How the Wiki.js 3 frontend is styled, for Kalon look work (checked against 3.3.0
 - Design tokens are CSS variables: the `@theme static` block in `frontend/src/css/tailwind.css` and `frontend/src/css/_theme.scss`. Page content styles are in `_page-contents.scss` (and `_page-contents-asciidoc.scss`), chrome in `_page-chrome.scss`, the visual editor in `_visual-editor.scss`.
 - Stock defaults that make it look dated: header `--q-header: #000`, Material blue `--q-primary: #1976d2`, `--font-sans: 'Roboto', ...`, very large thin headings (`--text-h1: 6rem` at weight 300, `--text-h2: 3.75rem` at weight 300).
 - Useful tokens: `--q-primary`, `--q-secondary`, `--q-accent`, `--q-header`, `--q-sidebar` (and their `--color-*` mirrors with `-light` and `-lighter` mixes), `--color-dark-1` to `--color-dark-6`, `--color-grey-*`, `--font-sans`, `--font-mono`, `--text-h1` to `--text-h6` with their `--font-weight` and `--line-height`.
-- Dark mode is the `body--dark` class (`frontend/src/composables/dark.js`); users already get a site, light or dark choice in the account menu and their profile, so Kalon defines token sets for both modes and adds no toggle logic.
+- Dark mode is the `body--dark` class (`frontend/src/composables/dark.js`); users already get a site, light or dark choice in the account menu and their profile, so Kalon defines token sets for both modes, and its light and dark switches save that same profile setting (`kalon/composables/appearance.js`).
 - Admin > Theme still works on top of Kalon: the backend injects a site's CSS override into the served page (`backend/helpers/appShell.ts`), never inside `/_admin`.
 
 How Kalon's own styling is wired (from `kalon: theme`):
@@ -129,7 +117,7 @@ git tag 3.4.0-kalon.1 && git push origin 3.4.0-kalon.1
 
 After the replay:
 
-1. Resolve conflicts one commit at a time. Because of rules 1 and 2, they should be rare and small.
+1. Resolve conflicts one commit at a time. Because Kalon's code is additive and its seams are tiny, they should be rare and small.
 2. Re-read the upstream `CLAUDE.md` files and `.claude/rules/*.md` for areas we touch, since upstream conventions may have changed.
 3. Run `git grep "kalon:"` and confirm every seam still makes sense.
 4. Drop any commit that upstream now provides.

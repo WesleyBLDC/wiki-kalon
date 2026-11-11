@@ -51,7 +51,7 @@ Ideas from the design work that are not built yet:
 
 - **Search with actions.** The search panel could offer commands beside matching pages, such as "New page in <folder>" or "Switch to light theme", like a command palette.
 - **Icons on link cards.** Link cards (`{.links-list}`) could show a coloured icon tile beside the title. Wiki.js link lists carry no icon today, so this needs a way to give each card one; the links grid block, which does take icons, is the alternative for now.
-- **Peek timing.** The collapsed sidebar floats in after the pointer rests on the window's edge or the expand button for 120ms, and leaves 300ms after the pointer moves away. The delays stop it flashing open when the pointer only passes the edge, and keep it open while the pointer crosses a small gap. They could become tunable if they prove too eager or too slow.
+- **Tunable peek delays.** The collapsed sidebar floats in after the pointer rests on the window's edge or the expand button for 120ms, and leaves 300ms after the pointer moves away, so it does not flash open when the pointer only passes the edge. The delays are fixed today and could become settings.
 
 ## Documentation
 
