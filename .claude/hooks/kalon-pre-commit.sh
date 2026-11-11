@@ -1,18 +1,21 @@
 #!/usr/bin/env bash
-# Wiki.js Kalon: the full frontend check before a commit, run as the clone's git pre-commit hook.
+# Wiki.js Kalon: the checks before a commit, run as the clone's git pre-commit hook.
 #
 #   ln -sf ../../.claude/hooks/kalon-pre-commit.sh .git/hooks/pre-commit
 #
-# Runs only when the commit touches `frontend/`: oxlint over the frontend, oxfmt on the staged Kalon
-# files, the icon bundle check, and a production build into a scratch folder. Lint and build read the
-# working tree, so stage whole files. The build needs Node 26 on PATH, as the
-# frontend does. Per-file formatting and lint already ran as each file was edited
+# On every commit: the name lint (`dev/kalon/check-names.sh`: no spelled out repository names in the
+# workflows, no retired names). Then, only when the commit touches `frontend/`: oxlint over the
+# frontend, oxfmt on the staged Kalon files, the icon bundle check, and a production build into a
+# scratch folder. Lint and build read the working tree, so stage whole files. The build needs Node 26
+# on PATH, as the frontend does. Per-file formatting and lint already ran as each file was edited
 # (`.claude/hooks/kalon-check-file.sh`).
 
 set -eu
 
 root=$(git rev-parse --show-toplevel)
 staged=$(git diff --cached --name-only --diff-filter=ACMR)
+
+"$root/dev/kalon/check-names.sh"
 
 printf '%s\n' "$staged" | grep -q '^frontend/' || exit 0
 
