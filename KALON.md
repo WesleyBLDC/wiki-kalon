@@ -165,7 +165,7 @@ KALON_ADMIN_PASSWORD=<admin password> node dev/kalon/apply-test-settings.mjs --u
 Checks run on their own, so nobody spends time running them by hand:
 
 - After an agent edits a frontend file, `.claude/hooks/kalon-check-file.sh` (wired in `.claude/settings.json`) formats it with oxfmt if it is a Kalon file, checks an upstream file without reformatting it, and lints it with oxlint. Lint errors go back to the agent.
-- Before each commit that touches `frontend/`, `.claude/hooks/kalon-pre-commit.sh` runs oxlint, oxfmt on the staged Kalon files, the icon bundle check and a production build (Node 26 on PATH). Install it once per clone: `ln -sf ../../.claude/hooks/kalon-pre-commit.sh .git/hooks/pre-commit`.
+- Before each commit that touches `frontend/`, `.claude/hooks/kalon-pre-commit.sh` runs oxlint, oxfmt on the staged Kalon files, the icon bundle check and a production build (Node 26 on PATH). Install it once per clone: `ln -sf ../../.claude/hooks/kalon-pre-commit.sh .git/hooks/pre-commit`. If your global git config sets `core.hooksPath`, git ignores `.git/hooks` entirely (this hook and any pre-push hook), so set it back for the clone: `git config core.hooksPath .git/hooks`.
 
 Check every UI change on phone, tablet and desktop widths, in light and dark mode, before committing.
 

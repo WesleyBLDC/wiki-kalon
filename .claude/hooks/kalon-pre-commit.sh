@@ -38,5 +38,11 @@ echo "kalon pre-commit: icon bundle"
 npm run --silent icons:check
 
 echo "kalon pre-commit: build"
-npm run --silent build >/dev/null
+log=$(mktemp)
+trap 'rm -f "$log"' EXIT
+# -> The build's warnings are upstream's own; shown only when the build fails
+if ! npm run --silent build >"$log" 2>&1; then
+  cat "$log" >&2
+  exit 1
+fi
 echo "kalon pre-commit: passed"
