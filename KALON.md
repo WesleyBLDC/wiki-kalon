@@ -27,6 +27,7 @@ Update this table in the same commit that adds, changes or drops a row.
 | `kalon: fork scaffolding` | Adds `.github/README.md`, `KALON.md`, `.claude/rules/kalon.md` and two workflows (`kalon-image.yml`, `kalon-upstream-watch.yml`). | None |
 | `kalon: theme` | Inter (vendored under `frontend/public/_assets/fonts/inter/`, SIL OFL) and Notion style light and dark tokens in `frontend/src/kalon/css/theme.css`; a flat light sidebar and header, flat page chrome and content ink in `frontend/src/kalon/css/_overrides.scss`. | `frontend/src/main.js` (imports the two sheets) |
 | `kalon: typography` | A 40px bold page title, a quieter content heading ramp (30, 24, 20px) with no rules under headings, and small sidebar section labels, all in `_overrides.scss`. Body text stays upstream's 16px / 1.6. | None |
+| `kalon: page tree sidebar` | `frontend/src/kalon/components/PageTree.vue` and `kalon/composables/pageTree.js`: the site's pages as a lazily loaded tree under the curated menu, from `GET sites/:siteId/tree/browse` like the Browse menu. Opens to the current page, remembers open folders per site and locale in `localStorage`, "+" to start a page in a folder (shown when `userStore.canWriteOnSite`), WAI-ARIA tree keys. Hidden when Allow Browsing is off. Kalon's strings live in `frontend/src/kalon/i18n.js`, a local i18n scope that falls back to upstream's. | `frontend/src/components/NavSidebar.vue` (renders and imports `PageTree`) |
 
 ## Clean fork rules
 

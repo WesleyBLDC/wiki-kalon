@@ -97,6 +97,8 @@
         <w-separator v-else-if="item.type === `separator`" dark />
       </template>
     </w-list>
+    <!-- kalon: the site's pages as a tree under the curated menu (kalon/components/PageTree.vue) -->
+    <page-tree />
   </w-scroll-area>
 </template>
 
@@ -112,6 +114,9 @@ import { routableHref } from '@/helpers/renderedContent'
 
 import { usePageStore } from '@/stores/page'
 import { useSiteStore } from '@/stores/site'
+
+// kalon: the page tree rendered under the curated menu
+import PageTree from '@/kalon/components/PageTree.vue'
 
 // STORES
 
