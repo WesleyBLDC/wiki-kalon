@@ -33,7 +33,7 @@ Update this table in the same commit that adds, changes or drops a row.
 | `kalon: page header` | While a page is read, the breadcrumb strip becomes a 44px top bar holding "Edited <date>", watch, the review queue, a ⋯ menu and Edit or Suggest Edits (`kalon/components/PageActions.vue`, conditions and handlers copied from `PageHeader.vue`). The ⋯ menu (`kalon/components/PageMenu.vue`, copied from `PageActionsCol.vue`) lists history, source, print, properties, data, duplicate, move, convert, rerender and delete as labelled rows, so the header's reading actions and the action rail are hidden by CSS while reading; the editor keeps both. The ⋯ menu also opens with an Appearance switch (Site, Light, Dark), saved to the profile as the account menu does (`kalon/composables/appearance.js`). Tags and "Last edited by <name> · <date>" move under the title (`kalon/components/PageMeta.vue`) and leave the contents column (750px and up; tags are edited from Properties). The title block follows the design board: a small tinted icon tile beside the title, the subtitle on its own line under both, breadcrumbs with only the Home icon and `/` separators, a 760px reading column when the width is centered, and no divider beside the article. Article, Talk and Links move from the article column to plain left aligned text tabs under the title. Compare the copied logic on each replay. | `frontend/src/pages/Index.vue` (renders and imports `PageActions` and `PageMeta`; moves `page-view-tabs` under the title) |
 | `kalon: content blocks` | Calmer content blocks, CSS only under `.page-contents` in `_overrides.scss`: callouts as a soft tint with a hairline of their colour all round (no side bar), plain quotes with a 2px ink bar, `{.links-list}` as a grid of bordered cards (as many across as fit at 300px, two in the reading column) with the description under the title and an arrow at the end, code blocks on warm grey with no border, smaller rounded inline code, and tables with row hairlines only (no dark head, stripes or shadow). Mostly upstream's `--content-*` tokens, with the dark values under `not print` as upstream does. | None |
 | `kalon: agent checks` | `.claude/settings.json` runs `.claude/hooks/kalon-check-file.sh` after each agent edit (oxfmt on Kalon files, oxlint on every frontend file, errors returned to the agent); `.claude/hooks/kalon-pre-commit.sh` is the git pre-commit hook running oxlint, oxfmt, the icon check and the build. Upstream's `.gitignore` ignores `.claude/*` apart from rules and skills, so these files were added with `git add -f` (tracked files stay tracked). If upstream ever adds its own `.claude/settings.json`, merge the hook into it. | None |
-| `kalon: test settings` | `dev/kalon/apply-test-settings.mjs` applies the settings Kalon is designed and checked with (editor set, dark default, centered width, primary color) to a running instance through the admin API, and the "Settings we test with" table lists them. Nothing changes the stored defaults. | None |
+| `kalon: default settings` | `dev/kalon/apply-kalon-settings.mjs` applies Kalon's default settings (editor set, dark default, centered width, primary color), used in testing and in production, to a running instance through the admin API; the "Default settings" table lists them. Nothing changes the stored defaults. | None |
 
 ## Clean fork rules
 
@@ -143,16 +143,19 @@ Use the upstream dev container, described at https://docs.js.wiki/dev.
 - Both workspaces need Node 26. Without the dev container, a Postgres 17+ in Docker on a local port and a `config.yml` (copied from `config.sample.yml`, gitignored) pointing at it is enough; run `npm run build` in `frontend/` once before the first backend start, since the backend serves `assets/`.
 - To try a change against a clean wiki, use the upstream throwaway instance skill in `.claude/skills/throwaway-instance`.
 
-### Settings we test with
+### Default settings
 
-Kalon ships stock Wiki.js defaults (it never changes stored settings), but it is designed and checked with a few of them changed.
-Apply them to a local or throwaway instance after its first boot:
+Kalon is designed for a few settings that differ from stock Wiki.js, and these are its default configuration: used for local testing and for production deployments alike.
+Kalon never changes stored settings, so a new instance starts with stock values until they are applied.
+Apply them after the first boot:
 
 ```sh
-KALON_ADMIN_PASSWORD=<admin password> node dev/kalon/apply-test-settings.mjs --url http://localhost:3000
+KALON_ADMIN_PASSWORD=<admin password> node dev/kalon/apply-kalon-settings.mjs --url http://localhost:3000
 ```
 
-| Setting (Admin screen) | Stock | Kalon testing |
+The script signs in with a local administrator account; where administrators sign in only through a provider, set the same values in the Admin screens.
+
+| Setting (Admin screen) | Stock | Kalon default |
 | --- | --- | --- |
 | Editors (Editors) | All seven on | Visual, Drawing and Redirection on; Markdown, AsciiDoc, Blog and Feedback off |
 | Dark mode (Theme) | Off | On, so readers who keep the site default get dark |
@@ -160,7 +163,7 @@ KALON_ADMIN_PASSWORD=<admin password> node dev/kalon/apply-test-settings.mjs --u
 | Primary color (Theme) | `#1976d2` | `#1f6fc5`, the accent the Kalon tokens are tuned to (AA on white) |
 | Allow browsing (General, Features) | On | On; the sidebar page tree needs it |
 
-`TEST_SETTINGS` at the top of the script is the same list; change both together.
+`KALON_SETTINGS` at the top of the script is the same list; change both together.
 
 Checks run on their own, so nobody spends time running them by hand:
 

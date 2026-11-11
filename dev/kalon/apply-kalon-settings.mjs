@@ -1,19 +1,21 @@
 #!/usr/bin/env node
 /*
-  Wiki.js Kalon: apply the settings Kalon is tested and viewed with to a running instance.
+  Wiki.js Kalon: apply Kalon's default settings to a running instance.
 
-  Kalon never changes the database or the stored defaults, so a fresh instance starts with stock Wiki.js
-  settings. This script logs in as an administrator and changes the few that differ, through the same
-  REST API the admin area uses. Run it against a local or throwaway instance after its first boot:
+  Kalon is designed for a few settings that differ from stock Wiki.js, and uses them in testing and in
+  production alike. It never changes the database or the stored defaults, so a fresh instance starts
+  with stock settings until they are applied. This script logs in as a local administrator and changes
+  them through the same REST API the admin area uses:
 
-    node dev/kalon/apply-test-settings.mjs [--url http://localhost:3000] [--email admin@example.com]
+    node dev/kalon/apply-kalon-settings.mjs [--url http://localhost:3000] [--email admin@example.com]
 
-  The password is read from KALON_ADMIN_PASSWORD (default: upstream's first-run `12345678`).
-  `KALON.md` lists the same settings in its "Settings we test with" table; change both together.
+  The password is read from KALON_ADMIN_PASSWORD (default: upstream's first-run `12345678`). An
+  instance whose administrators sign in only through a provider sets the same values in the admin area.
+  `KALON.md` lists them in its "Default settings" table; change both together.
 */
 
 /** What differs from a stock install. */
-export const TEST_SETTINGS = {
+export const KALON_SETTINGS = {
   // -> The editors Kalon is designed around; the others stay installed and can be switched back on
   editors: {
     visual: true,
@@ -85,14 +87,14 @@ if (!login?.authenticated) {
 const site = await call('GET', `/sites/${siteId}`)
 
 const editors = structuredClone(site.editors ?? {})
-for (const [name, isActive] of Object.entries(TEST_SETTINGS.editors)) {
+for (const [name, isActive] of Object.entries(KALON_SETTINGS.editors)) {
   editors[name] = { ...editors[name], isActive }
 }
 await call('PUT', `/sites/${siteId}`, {
   editors,
-  features: { ...site.features, ...TEST_SETTINGS.features }
+  features: { ...site.features, ...KALON_SETTINGS.features }
 })
-await call('PUT', `/sites/${siteId}/theme`, { ...site.theme, ...TEST_SETTINGS.theme })
+await call('PUT', `/sites/${siteId}/theme`, { ...site.theme, ...KALON_SETTINGS.theme })
 
 const after = await call('GET', `/sites/${siteId}`)
 const active = Object.entries(after.editors)
