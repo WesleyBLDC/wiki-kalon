@@ -7,7 +7,8 @@ The public front page is `.github/README.md`; upstream's root `README.md` stays 
 
 ## Branches, tags and versions
 
-- Image: `ghcr.io/wesleybldc/wikijs-kalon`.
+- Image: `ghcr.io/wesleybldc/wiki-kalon`, named after the repository (`ghcr.io/wesleybldc/wikijs-kalon` before the repository was renamed; both hold `3.3.0-kalon.1` and `3.3.0-kalon.2`).
+  `.github/workflows/kalon-image-copy.yml` copies release images from an old name, run by hand after a rename.
 - Git and image tags: `<upstream version>-kalon.<n>`, for example `3.3.0-kalon.1`.
 - The app reports its version as `<upstream>+kalon.<n>` (semver build metadata), so update checks behave like stock.
 - One branch per upstream release: `kalon/<upstream version>`, for example `kalon/3.3.0`. The newest is the default branch.
@@ -24,7 +25,7 @@ Update this table in the same commit that adds, changes or drops a row.
 
 | Commit subject | Purpose | Upstream files touched |
 | --- | --- | --- |
-| `kalon: fork scaffolding` | Adds `.github/README.md`, `KALON.md`, `.claude/rules/kalon.md` and two workflows (`kalon-image.yml`, `kalon-upstream-watch.yml`). | None |
+| `kalon: fork scaffolding` | Adds `.github/README.md`, `KALON.md`, `.claude/rules/kalon.md` and three workflows (`kalon-image.yml`, `kalon-upstream-watch.yml`, and `kalon-image-copy.yml`, run by hand to copy release images after a rename). | None |
 | `kalon: theme` | Inter (vendored under `frontend/public/_assets/fonts/inter/`, SIL OFL) and Notion style light and dark tokens in `frontend/src/kalon/css/theme.css`; a flat light sidebar and header, flat page chrome, content ink, the search results as a menu card (one line per page with its path beside the title), and quiet editor chrome (the Visual, Markdown and AsciiDoc formatting bars, insert rails, preview and Contents captions in the page colour with hairlines, no blue bar or orange brickwork, and no grey desk behind the Visual editor's centered sheet) in `frontend/src/kalon/css/_overrides.scss`. | `frontend/src/main.js` (imports the two sheets) |
 | `kalon: typography` | A 40px bold page title, a quieter content heading ramp (30, 24, 20px) with no rules under headings, and small sidebar section labels, all in `_overrides.scss`. Body text stays upstream's 16px / 1.6. | None |
 | `kalon: page tree sidebar` | `frontend/src/kalon/components/PageTree.vue` and `kalon/composables/pageTree.js`: the site's pages as a lazily loaded tree under the curated menu, from `GET sites/:siteId/tree/browse` like the Browse menu. Each folder lists its pages in the order of the navigation menu shown there (`GET sites/:siteId/navigation/path`, then the menu), so dragging items in Edit Nav arranges the tree with no backend change; pages the menu leaves out follow in the server's A to Z order, and the tree takes in the curated sidebar's menu each time it is read again. Opens to the current page, remembers open folders per site and locale in `localStorage`, "+" to start a page in a folder and a "New page" row under the tree (shown when `userStore.canWriteOnSite`), WAI-ARIA tree keys. A level the server capped ends in "More in the file manager…", opening the file manager on that folder for whoever may use it (the Library menu's gate). A level that fails to load offers "Try again"; a remembered folder that is gone is closed quietly; after content changes anywhere, the levels keep showing what they held while one watcher fetches those on screen again (`LEVEL_STATUS`: loading, ready, stale, refreshing, failed). Hidden when Allow Browsing is off. Kalon's strings live in `frontend/src/kalon/i18n.js`, a local i18n scope that falls back to upstream's. | `frontend/src/components/NavSidebar.vue` (renders and imports `PageTree`) |
@@ -84,7 +85,7 @@ The most useful design reference is `Tom-Stadermann/Wiki-js-shadcn-theme` (shadc
    ```
 
 3. The `.github/workflows/kalon-image.yml` workflow runs on the tag.
-   It builds the frontend and blocks like upstream, builds `dev/build/Dockerfile`, smoke tests the image, pushes `ghcr.io/wesleybldc/wikijs-kalon:<tag>` and creates a GitHub Release.
+   It builds the frontend and blocks like upstream, builds `dev/build/Dockerfile`, smoke tests the image, pushes `ghcr.io/wesleybldc/wiki-kalon:<tag>` and creates a GitHub Release.
 4. Fixes during a release are `git commit --fixup <commit>` on the kalon branch, followed by a new tag with the next `<n>`.
 
 ## Upgrade to a new upstream release
@@ -163,6 +164,6 @@ Check every UI change on phone, tablet and desktop widths, in light and dark mod
 
 ## Rollback
 
-- To go back to a previous Kalon release, set the image to that exact earlier tag, for example `ghcr.io/wesleybldc/wikijs-kalon:3.3.0-kalon.1`. Old tags are protected and stay available.
+- To go back to a previous Kalon release, set the image to that exact earlier tag, for example `ghcr.io/wesleybldc/wiki-kalon:3.3.0-kalon.1`. Old tags are protected and stay available.
 - To leave Kalon entirely, set the image to `ghcr.io/requarks/wiki:<same upstream version>`. Kalon never changes the database, so no restore is needed.
 - Keep a backup before any upstream version upgrade, as with stock Wiki.js. A newer upstream version may migrate the database in ways older images cannot read.

@@ -24,7 +24,8 @@ jobs:
       contents: write # create the GitHub Release
       packages: write # push to ghcr.io
     env:
-      IMAGE: ghcr.io/${{ github.repository_owner }}/wikijs-kalon
+      # -> Named after the repository, so a renamed repository publishes under its new name
+      IMAGE: ghcr.io/${{ github.repository }}
 
     steps:
       - uses: actions/checkout@v7

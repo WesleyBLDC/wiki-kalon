@@ -30,7 +30,7 @@ In your existing compose file, change only the image line:
 ```yaml
 services:
   wiki:
-    image: ghcr.io/wesleybldc/wikijs-kalon:3.3.0-kalon.2
+    image: ghcr.io/wesleybldc/wiki-kalon:3.3.0-kalon.2
     # everything else stays as it was
 ```
 
