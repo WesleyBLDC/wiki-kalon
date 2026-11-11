@@ -4,6 +4,8 @@ import './assetPath.js'
 import { createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Excalidraw, exportToSvg, languages, serializeAsJSON } from '@excalidraw/excalidraw'
+// kalon: on its own line so the upstream import stays untouched
+import { FONT_FAMILY } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
 
 import { FILES_PREFIX } from '@/helpers/assets'
@@ -55,7 +57,13 @@ const EXPORT_PADDING = 8
  */
 const EMPTY_SCENE = {
   elements: [],
-  appState: { viewBackgroundColor: '#ffffff', gridSize: null },
+  // kalon: new text starts in Nunito, Excalidraw's clean sans serif, rather than the hand-drawn
+  //        Excalifont; Excalidraw does not store this setting with a drawing, so it applies to every one
+  appState: {
+    viewBackgroundColor: '#ffffff',
+    gridSize: null,
+    currentItemFontFamily: FONT_FAMILY.Nunito
+  },
   files: {}
 }
 
